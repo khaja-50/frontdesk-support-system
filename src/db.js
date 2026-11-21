@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { addWorkingMinutes, workingMinutesBetween } from './sla.js';
 
 const usePostgres = Boolean(process.env.DATABASE_URL) && process.env.NODE_ENV !== 'test';
+export const storage = usePostgres ? 'postgresql' : 'sqlite';
 const schema = `
 CREATE TABLE IF NOT EXISTS tickets (id BIGSERIAL PRIMARY KEY, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL, sla_due_at TIMESTAMPTZ NOT NULL, closed_at TIMESTAMPTZ);
 CREATE TABLE IF NOT EXISTS messages (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES tickets(id), author_id TEXT NOT NULL, body TEXT NOT NULL, visibility TEXT NOT NULL CHECK(visibility IN ('public','internal')), created_at TIMESTAMPTZ NOT NULL);

@@ -32,7 +32,7 @@ Production login uses a hashed password and an HTTP-only session cookie. Set `AD
 ## Verification after hosting
 
 1. Open the deployed URL and confirm the dashboard loads.
-2. Check `/health` returns `{"status":"ok"}`.
+2. Check `/health` returns `{"status":"ok","storage":"postgresql","persistent":true}`. If it reports SQLite, the Render service is still using its fallback and `DATABASE_URL` has not been linked yet.
 3. Create a normal and urgent ticket and confirm their SLA due times differ.
 4. Assign the same ticket from two agent sessions; only one assignment should succeed.
 5. Add a public reply and an internal note; customer views and exports must show only the public reply.

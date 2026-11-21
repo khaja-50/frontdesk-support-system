@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { ready, listTickets, getTicket, customerExport, createTicket, assignTicket, addMessage, updateStatus, reopenTicket } from './db.js';
+import { ready, storage, listTickets, getTicket, customerExport, createTicket, assignTicket, addMessage, updateStatus, reopenTicket } from './db.js';
 import { authReady, login, logout, registerUser, userFromToken } from './auth.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -17,7 +17,7 @@ function sessionCookie(token, maxAge = 7 * 86400) { return `frontdesk_session=${
 export async function app(req, res) {
   await Promise.all([ready, authReady]);
   const url = new URL(req.url, 'http://localhost');
-  if (url.pathname === '/health') return json(res,200,{status:'ok'});
+  if (url.pathname === '/health') return json(res,200,{status:'ok',storage,persistent:storage==='postgresql'});
   if (url.pathname === '/' || url.pathname === '/index.html') return readFile(join(root,'../public/index.html')).then(html=>{res.writeHead(200,{'content-type':'text/html'});res.end(html);});
   if (url.pathname === '/app.js') return readFile(join(root,'../public/app.js')).then(html=>{res.writeHead(200,{'content-type':'text/javascript'});res.end(html);});
   if (url.pathname === '/styles.css') return readFile(join(root,'../public/styles.css')).then(css=>{res.writeHead(200,{'content-type':'text/css'});res.end(css);});
