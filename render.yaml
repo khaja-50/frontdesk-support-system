@@ -2,6 +2,7 @@ services:
   - type: web
     name: frontdesk-support-system
     runtime: docker
+    autoDeploy: true
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
