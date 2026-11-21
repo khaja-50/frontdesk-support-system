@@ -15,3 +15,12 @@
 .audit{border-top:1px solid var(--line);padding-top:18px;display:grid;gap:9px;overflow-wrap:anywhere}
 .audit h3{font-size:18px;margin-bottom:2px}.audit p{font-size:13px;line-height:1.45}
 @media(max-width:560px){#ticket-detail-dialog form{padding:28px 20px 28px}#ticket-detail-dialog{max-height:calc(100vh - 16px)}.detail-row{grid-template-columns:1fr}}
+.demo-note{display:grid;gap:6px}.demo-note-hint{font-size:11px;color:#999}
+.brand-mark{position:relative;transform:rotate(45deg);border-radius:7px;border:2px solid #111;background:#fff}.brand-mark i{display:block;width:11px;height:11px;border:2px solid #111;border-radius:3px}
+.brand-mark,.brand-mark i{transform-origin:center}
+.side-account{margin-top:auto;border-top:1px solid #333;padding-top:18px;display:grid;gap:8px}.side-account small{color:#8e8e8e;letter-spacing:.14em;font-size:10px;text-transform:uppercase}.side-account span{font-size:13px;font-weight:700}.sidebar-signout{border:1px solid #444;background:transparent;color:#fff;border-radius:7px;padding:10px 12px;text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.sidebar-signout:hover{background:#fff;color:#111}
+.card .description,.card .meta,.card .sla{display:none}.card{gap:16px}.card h3{font-size:18px;line-height:1.25}.card-top{gap:8px}.ticket-id{font-weight:700}
+select{padding-right:42px;appearance:none;background-image:linear-gradient(45deg,transparent 50%,#555 50%),linear-gradient(135deg,#555 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+.toast{position:fixed;right:24px;bottom:24px;z-index:10;display:flex;align-items:center;gap:10px;max-width:320px;padding:13px 16px;border:1px solid #222;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;box-shadow:0 12px 30px #0002;opacity:0;transform:translateY(10px);pointer-events:none}.toast.show{animation:toast-in 220ms ease-out forwards}.toast.ticket::before{content:'✓';display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#fff;color:#111;font-size:13px}@keyframes toast-in{to{opacity:1;transform:translateY(0)}}
+button.is-loading{position:relative;color:transparent!important;pointer-events:none}button.is-loading::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:spin 220ms linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:800px){.side-account{display:none}}
