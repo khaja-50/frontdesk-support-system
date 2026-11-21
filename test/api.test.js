@@ -21,3 +21,8 @@ test('only one assignment wins when two agents try the same ticket', () => {
   assert.equal(first.assignee_id, 'agent-a');
   assert.equal(second, null);
 });
+test('ticket creation rejects incomplete or malformed customer data', () => {
+  assert.throws(() => createTicket({subject:'',customer_email:'bad',description:''}), /subject is required/);
+  assert.throws(() => createTicket({subject:'Login',customer_email:'bad',description:'Help'}), /customer_email must be valid/);
+  assert.throws(() => createTicket({subject:'Login',customer_email:'a@example.com',description:'Help',priority:'critical'}), /priority is invalid/);
+});

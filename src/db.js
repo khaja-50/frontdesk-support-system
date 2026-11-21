@@ -13,6 +13,12 @@ CREATE TABLE IF NOT EXISTS holidays (date TEXT PRIMARY KEY, label TEXT NOT NULL)
 const now = () => new Date().toISOString();
 const holidays = () => db.prepare('SELECT date FROM holidays').all().map(x => x.date);
 const audit = (ticketId, actorId, action, details) => db.prepare('INSERT INTO audit_events(ticket_id,actor_id,action,details,created_at) VALUES(?,?,?,?,?)').run(ticketId, actorId, action, JSON.stringify(details), now());
+function validateTicketInput(input) {
+  const required = ['subject', 'customer_email', 'description'];
+  for (const field of required) if (typeof input[field] !== 'string' || !input[field].trim()) throw new Error(`${field} is required`);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.customer_email)) throw new Error('customer_email must be valid');
+  if (input.priority && !['normal', 'high', 'urgent'].includes(input.priority)) throw new Error('priority is invalid');
+}
 
 export function listTickets() { return db.prepare('SELECT * FROM tickets ORDER BY updated_at DESC').all(); }
 export function getTicket(id, includeInternal = false) {
@@ -23,6 +29,7 @@ export function getTicket(id, includeInternal = false) {
   return ticket;
 }
 export function createTicket(input, actorId='customer') {
+  validateTicketInput(input);
   const created = now();
   const due = addWorkingMinutes(created, input.priority === 'urgent' ? 60 : input.priority === 'high' ? 240 : 480, holidays());
   const result = db.prepare('INSERT INTO tickets(subject,customer_email,description,priority,status,created_at,updated_at,sla_due_at) VALUES(?,?,?,?,?,?,?,?)').run(input.subject, input.customer_email, input.description, input.priority || 'normal', 'open', created, created, due);
