@@ -11,7 +11,7 @@ npm test
 npm start
 ```
 
-Open <http://localhost:3000>. The local demo uses Node's built-in SQLite driver so the app can be reviewed without a service account. `DB_FILE` can point to a persistent database file.
+Open <http://localhost:3000>. Tests and local development use Node's built-in SQLite driver so the app can be reviewed without a service account. Production uses PostgreSQL whenever `DATABASE_URL` is present.
 
 ## Business rules implemented
 
@@ -23,7 +23,7 @@ Open <http://localhost:3000>. The local demo uses Node's built-in SQLite driver 
 
 ## Honest completion note
 
-This repository is a focused assessment implementation. The local workflow is complete and tested. Production deployment still requires wiring a managed PostgreSQL database and setting the platform's environment variables. The SQLite storage is intentionally the zero-setup review path; the schema is kept small so it can be ported to PostgreSQL without changing the API contract.
+This repository is a focused assessment implementation. The local workflow is complete and tested. The Render blueprint provisions a managed PostgreSQL database and injects its connection string as `DATABASE_URL`; the application creates its tables on startup. SQLite remains the zero-setup review path for local tests, while the production API uses PostgreSQL without changing the API contract.
 
 ## Verification after hosting
 
