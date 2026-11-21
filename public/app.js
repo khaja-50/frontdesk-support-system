@@ -31,7 +31,7 @@ function render(tickets) {
   $('#stats').innerHTML = `<div class="stat"><small>Open queue</small><strong>${counts.open}</strong><span>Needs a first response</span></div><div class="stat"><small>In progress</small><strong>${counts.active}</strong><span>Being handled now</span></div><div class="stat"><small>Urgent</small><strong>${counts.urgent}</strong><span>Highest priority</span></div><div class="stat"><small>SLA policy</small><strong>09:30—18:30</strong><span>Working hours</span></div>`;
   $('#result-count').textContent = `${tickets.length} ticket${tickets.length === 1 ? '' : 's'}`;
   const empty = currentView === 'waiting' ? 'No tickets are waiting for a customer reply.' : currentView === 'closed' ? 'No closed tickets yet.' : 'No open tickets. Create a new ticket to start the queue.';
-  $('#tickets').innerHTML = tickets.length ? tickets.map((ticket) => `<article class="card" data-ticket-id="${ticket.id}" tabindex="0" role="button"><div class="card-top"><span class="ticket-id">#${ticket.id}</span><span class="badge ${ticket.priority}">${ticket.priority}</span><span class="badge ${ticket.status}">${ticket.status.replace('_', ' ')}</span></div><h3>${escapeHtml(ticket.subject)}</h3></article>`).join('') : `<div class="empty">${empty}</div>`;
+  $('#tickets').innerHTML = tickets.length ? tickets.map((ticket) => `<article class="card" data-ticket-id="${ticket.id}" tabindex="0" role="button"><div class="card-top"><span class="ticket-id">#${ticket.id}</span><span class="badge ${ticket.priority}">${ticket.priority}</span><span class="badge ${ticket.status}">${ticket.status.replace('_', ' ')}</span></div><h3>${escapeHtml(ticket.subject)}</h3><div class="card-summary"><span>${escapeHtml(ticket.customer_email)}</span><span>${ticket.assignee_id ? `Assigned to ${escapeHtml(ticket.assignee_id)}` : 'Unassigned'}</span></div></article>`).join('') : `<div class="empty">${empty}</div>`;
 }
 
 function filterTickets() {
@@ -64,13 +64,13 @@ async function openTicket(id) {
   } catch (error) { alert(error.message); }
 }
 
-function showDashboard(user) { currentUser = user; $('#login-panel').classList.add('hidden'); $('#app-shell').classList.remove('hidden'); $('#current-user').textContent = `${user.display_name} · ${user.role}`; $('#sidebar-user').textContent = user.display_name; refresh(); }
+function showDashboard(user) { currentUser = user; $('#login-panel').classList.add('hidden'); $('#app-shell').classList.remove('hidden'); refresh(); }
 
-$('#login-form').onsubmit = async (event) => { event.preventDefault(); $('#login-error').textContent = ''; const button = event.target.querySelector('button[type="submit"]'); setLoading(button, true); try { showDashboard(await api('/api/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) })); } catch (error) { $('#login-error').textContent = error.message; } finally { setLoading(button, false); } };
+$('#login-form').onsubmit = async (event) => { event.preventDefault(); $('#login-error').textContent = ''; const button = event.target.querySelector('button[type="submit"]'); setLoading(button, true); try { showDashboard(await api('/api/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) })); showToast('Signed in successfully'); } catch (error) { $('#login-error').textContent = error.message; } finally { setLoading(button, false); } };
 $('#register-form').onsubmit = async (event) => { event.preventDefault(); $('#register-error').textContent = ''; try { showDashboard(await api('/api/auth/register', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) })); } catch (error) { $('#register-error').textContent = error.message; } };
 $('#show-register').onclick = () => { $('#login-form').classList.add('hidden'); $('#register-form').classList.remove('hidden'); };
 $('#show-login').onclick = () => { $('#register-form').classList.add('hidden'); $('#login-form').classList.remove('hidden'); };
-$('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.reload(); };
+$('#logout').onclick = async (event) => { const button = event.currentTarget; setLoading(button, true); await api('/api/auth/logout', { method: 'POST' }); showToast('Signing out'); window.setTimeout(() => location.reload(), 220); };
 $('#new-ticket').onclick = () => $('#ticket-dialog').showModal();
 $('#search').oninput = filterTickets;
 $('#tickets').onclick = (event) => { const card = event.target.closest('[data-ticket-id]'); if (card) openTicket(card.dataset.ticketId); };
