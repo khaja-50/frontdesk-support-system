@@ -25,6 +25,15 @@ Open <http://localhost:3000>. The local demo uses Node's built-in SQLite driver 
 
 This repository is a focused assessment implementation. The local workflow is complete and tested. Production deployment still requires wiring a managed PostgreSQL database and setting the platform's environment variables. The SQLite storage is intentionally the zero-setup review path; the schema is kept small so it can be ported to PostgreSQL without changing the API contract.
 
+## Verification after hosting
+
+1. Open the deployed URL and confirm the dashboard loads.
+2. Check `/health` returns `{"status":"ok"}`.
+3. Create a normal and urgent ticket and confirm their SLA due times differ.
+4. Assign the same ticket from two agent sessions; only one assignment should succeed.
+5. Add a public reply and an internal note; customer views and exports must show only the public reply.
+6. Move a ticket to `waiting_customer`, close it, and verify the audit trail records each transition.
+
 ## Key routes
 
-`GET /api/tickets`, `POST /api/tickets`, `GET /api/tickets/:id`, `POST /api/tickets/:id/assign`, `POST /api/tickets/:id/messages`, `POST /api/tickets/:id/reopen`, `GET /api/tickets/:id/audit`.
+`GET /api/tickets`, `POST /api/tickets`, `GET /api/tickets/:id`, `POST /api/tickets/:id/assign`, `POST /api/tickets/:id/messages`, `POST /api/tickets/:id/status`, `POST /api/tickets/:id/reopen`, `GET /api/tickets/:id/audit`, `GET /api/tickets/:id/export`.
