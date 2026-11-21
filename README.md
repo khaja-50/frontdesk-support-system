@@ -29,6 +29,8 @@ This repository is a focused assessment implementation. The local workflow is co
 
 Production login uses a hashed password and an HTTP-only session cookie. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the hosting environment to bootstrap the first administrator. An administrator can create customer or agent accounts with `POST /api/users`; customers can see only their own tickets, while agents and administrators can work the full queue and add internal notes.
 
+For the assessment demo, use the temporary administrator email and password configured in Render under the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables. The sign-in page points reviewers here for setup guidance. Do not commit the actual password to this public repository; replace the temporary value after review if the deployment is reused.
+
 ## Verification after hosting
 
 1. Open the deployed URL and confirm the dashboard loads.
