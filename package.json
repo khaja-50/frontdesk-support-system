@@ -7,13 +7,17 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "NODE_ENV=test node --test --test-concurrency=1",
-    "check": "node --check src/server.js"
+    "test": "NODE_ENV=test DB_FILE=:memory: node --test --test-concurrency=1 test/*.test.js",
+    "check": "node --check src/server.js && node --check public/app.js && node --check public/queue.js",
+    "test:browser": "playwright test"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
   }
 }

@@ -7,6 +7,7 @@ Frontdesk is a support-ticket workspace built for the Full Stack Developer asses
 Requires Node.js 22 or newer.
 
 ```bash
+npm ci
 npm test
 npm start
 ```
@@ -45,3 +46,24 @@ For the assessment demo, use the temporary administrator email and password conf
 ## Key routes
 
 `GET /api/tickets`, `POST /api/tickets`, `GET /api/tickets/:id`, `POST /api/tickets/:id/assign`, `POST /api/tickets/:id/messages`, `POST /api/tickets/:id/status`, `POST /api/tickets/:id/reopen`, `GET /api/tickets/:id/audit`, `GET /api/tickets/:id/export`.
+
+## Dashboard controls
+
+Search matches ticket IDs, subjects, customer emails, and descriptions. Status, priority, and assignee filters combine with search; sorting supports recent activity, oldest, newest, and urgency. The default queue excludes closed tickets. Choose **All statuses** to include them, or use the sidebar's Closed tickets view. Clear filters returns to the default active queue.
+
+The summary buttons count all tickets the signed-in user can access. Selecting a summary resets other filters so its result count matches the metric. Assignee options come from the returned tickets; the interface shows agent IDs because the existing API does not provide an agent directory. Ticket timestamps use the browser's local time.
+
+The compact navigation drawer supports keyboard focus, Escape, Profile, and Sign out. Motion is reduced when the operating system requests it. Icons are bundled locally; their license is in `THIRD_PARTY_NOTICES.md`.
+
+## Browser verification
+
+```bash
+npm run check
+npm test
+npx playwright install chromium
+npm run test:browser
+```
+
+The browser suite runs the real app and API with an isolated in-memory SQLite database and test-only accounts. It checks desktop (1440px), tablet (820px), and mobile (390px) layouts, filtering, sorting, keyboard access, login errors, registration, profile, sign-out, ticket creation, replies, notes, assignment, and status changes. Customer exports are checked for private-note leakage. Screenshots and failure traces are saved under `test-results/` and are not committed.
+
+These local checks do not verify Render connectivity or PostgreSQL deployment configuration; use the hosted verification steps above for those. GitHub Actions runs both the unit checks and browser workflows on each push.
