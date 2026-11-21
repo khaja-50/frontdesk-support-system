@@ -18,10 +18,10 @@ export function app(req, res) {
   if (!url.pathname.startsWith('/api/')) return json(res,404,{error:'Not found'});
   try {
     if (req.method==='GET' && url.pathname==='/api/tickets') return json(res,200,listTickets());
+    if (req.method==='POST' && url.pathname==='/api/tickets') return body(req).then(input=>json(res,201,createTicket(input,actor)));
     const m = url.pathname.match(/^\/api\/tickets\/(\d+)(?:\/(assign|messages|status|reopen|audit|export))?$/); if (!m) return json(res,404,{error:'Not found'});
     const id = Number(m[1]), action=m[2];
     if (req.method==='GET' && !action) return json(res,200,getTicket(id, role==='agent' || role==='admin'));
-    if (req.method==='POST' && !action) return body(req).then(input=>json(res,201,createTicket(input,actor)));
     if (req.method==='POST' && action==='assign') return body(req).then(input=>{const result=assignTicket(id,input.assignee_id,actor); return result ? json(res,200,result) : json(res,409,{error:'Ticket has already been assigned'});});
     if (req.method==='POST' && action==='messages') return body(req).then(input=>{if(input.visibility==='internal' && role==='customer') return json(res,403,{error:'Internal notes are private'}); return json(res,201,addMessage(id,input,actor));});
     if (req.method==='POST' && action==='status') return body(req).then(input=>json(res,200,updateStatus(id,input.status,actor)));
