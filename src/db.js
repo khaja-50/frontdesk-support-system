@@ -8,7 +8,9 @@ const schema = `
 CREATE TABLE IF NOT EXISTS tickets (id BIGSERIAL PRIMARY KEY, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL, sla_due_at TIMESTAMPTZ NOT NULL, closed_at TIMESTAMPTZ);
 CREATE TABLE IF NOT EXISTS messages (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES tickets(id), author_id TEXT NOT NULL, body TEXT NOT NULL, visibility TEXT NOT NULL CHECK(visibility IN ('public','internal')), created_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_events (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES tickets(id), actor_id TEXT NOT NULL, action TEXT NOT NULL, details JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL);
-CREATE TABLE IF NOT EXISTS holidays (date DATE PRIMARY KEY, label TEXT NOT NULL);`;
+CREATE TABLE IF NOT EXISTS holidays (date DATE PRIMARY KEY, label TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, display_name TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('customer','agent','admin')), created_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL);`;
 
 export const db = usePostgres ? null : (() => {
   mkdirSync('data', { recursive: true });
@@ -17,7 +19,9 @@ export const db = usePostgres ? null : (() => {
     CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, sla_due_at TEXT NOT NULL, closed_at TEXT);
     CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL REFERENCES tickets(id), author_id TEXT NOT NULL, body TEXT NOT NULL, visibility TEXT NOT NULL CHECK(visibility IN ('public','internal')), created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS audit_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL REFERENCES tickets(id), actor_id TEXT NOT NULL, action TEXT NOT NULL, details TEXT NOT NULL, created_at TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS holidays (date TEXT PRIMARY KEY, label TEXT NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS holidays (date TEXT PRIMARY KEY, label TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, display_name TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('customer','agent','admin')), created_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TEXT NOT NULL);`);
   return sqlite;
 })();
 
@@ -35,9 +39,30 @@ function validateTicketInput(input) {
 function sqliteAudit(ticketId, actorId, action, details) { return db.prepare('INSERT INTO audit_events(ticket_id,actor_id,action,details,created_at) VALUES(?,?,?,?,?)').run(ticketId, actorId, action, JSON.stringify(details), now()); }
 async function pgAudit(ticketId, actorId, action, details) { await pgQuery('INSERT INTO audit_events(ticket_id,actor_id,action,details,created_at) VALUES($1,$2,$3,$4,$5)', [ticketId, actorId, action, details, now()]); }
 
-export async function listTickets() {
-  if (usePostgres) return (await pgQuery('SELECT * FROM tickets ORDER BY updated_at DESC')).rows;
-  return db.prepare('SELECT * FROM tickets ORDER BY updated_at DESC').all();
+export async function listTickets(customerEmail = null) {
+  if (usePostgres) return customerEmail ? (await pgQuery('SELECT * FROM tickets WHERE lower(customer_email)=lower($1) ORDER BY updated_at DESC', [customerEmail])).rows : (await pgQuery('SELECT * FROM tickets ORDER BY updated_at DESC')).rows;
+  return customerEmail ? db.prepare('SELECT * FROM tickets WHERE lower(customer_email)=lower(?) ORDER BY updated_at DESC').all(customerEmail) : db.prepare('SELECT * FROM tickets ORDER BY updated_at DESC').all();
+}
+export async function findUserByEmail(email) {
+  if (usePostgres) return (await pgQuery('SELECT id,email,password_hash,display_name,role FROM users WHERE lower(email)=lower($1)', [email])).rows[0] || null;
+  return db.prepare('SELECT id,email,password_hash,display_name,role FROM users WHERE lower(email)=lower(?)').get(email) || null;
+}
+export async function createUser({ id, email, passwordHash, displayName, role }) {
+  if (!['customer', 'agent', 'admin'].includes(role)) throw new Error('role is invalid');
+  if (usePostgres) return (await pgQuery('INSERT INTO users(id,email,password_hash,display_name,role,created_at) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,email,display_name,role', [id, email, passwordHash, displayName, role, now()])).rows[0];
+  return db.prepare('INSERT INTO users(id,email,password_hash,display_name,role,created_at) VALUES(?,?,?,?,?,?)').run(id, email, passwordHash, displayName, role, now());
+}
+export async function createSession(tokenHash, userId, expiresAt) {
+  if (usePostgres) await pgQuery('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)', [tokenHash, userId, expiresAt]);
+  else db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(tokenHash, userId, expiresAt);
+}
+export async function findUserBySession(tokenHash) {
+  if (usePostgres) return (await pgQuery('SELECT u.id,u.email,u.display_name,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at > NOW()', [tokenHash])).rows[0] || null;
+  return db.prepare("SELECT u.id,u.email,u.display_name,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at > datetime('now')").get(tokenHash) || null;
+}
+export async function deleteSession(tokenHash) {
+  if (usePostgres) await pgQuery('DELETE FROM sessions WHERE token_hash=$1', [tokenHash]);
+  else db.prepare('DELETE FROM sessions WHERE token_hash=?').run(tokenHash);
 }
 export async function getTicket(id, includeInternal = false) {
   if (usePostgres) {

@@ -25,6 +25,10 @@ Open <http://localhost:3000>. Tests and local development use Node's built-in SQ
 
 This repository is a focused assessment implementation. The local workflow is complete and tested. The Render blueprint provisions a managed PostgreSQL database and injects its connection string as `DATABASE_URL`; the application creates its tables on startup. SQLite remains the zero-setup review path for local tests, while the production API uses PostgreSQL without changing the API contract.
 
+## Login and roles
+
+Production login uses a hashed password and an HTTP-only session cookie. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the hosting environment to bootstrap the first administrator. An administrator can create customer or agent accounts with `POST /api/users`; customers can see only their own tickets, while agents and administrators can work the full queue and add internal notes.
+
 ## Verification after hosting
 
 1. Open the deployed URL and confirm the dashboard loads.
