@@ -1,9 +1,136 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Frontdesk | Support operations</title><link rel="stylesheet" href="/styles.css"><style>.login-panel form{max-width:420px;padding:42px;gap:22px}.login-panel h1{font-size:42px;line-height:1.05;margin:0 0 6px}.login-panel .subhead{font-size:16px;line-height:1.4;margin:0 0 4px}.login-panel label{gap:10px;font-size:14px}.login-panel input{padding:15px 16px}.login-panel .primary{margin-top:3px}.login-panel .form-error{margin-top:-4px}.demo-note{border-top:1px solid var(--line);padding-top:20px;margin-top:2px;color:var(--muted);font-size:12px;line-height:1.6}.demo-note strong{color:var(--ink);font-size:13px}.account-switch{text-align:center;color:var(--muted);font-size:12px;margin-top:2px}.account-switch .text-button{font-size:12px;font-weight:800;color:var(--ink);text-decoration:underline;text-underline-offset:3px;margin-left:2px;padding:0;cursor:pointer}</style></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Frontdesk | Support operations</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
 <body>
-<section id="login-panel" class="login-panel"><form id="login-form"><p class="eyebrow">FRONTDESK ACCESS</p><h1>Sign in</h1><p class="subhead">Use your support workspace account.</p><label>Email<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label><label>Password<input type="password" name="password" required autocomplete="current-password" placeholder="Your password"></label><button class="primary" type="submit">Sign in</button><p id="login-error" class="form-error"></p><div class="demo-note"><strong>Administrator access · Demo only</strong><span>Email: khawajarizwanali123@gmail.com</span><span>Password: configured privately in Render</span></div><p class="account-switch">Need a customer account? <button type="button" class="text-button" id="show-register">Create one</button></p></form><form id="register-form" class="hidden"><p class="eyebrow">NEW CUSTOMER ACCOUNT</p><h1>Create account</h1><p class="subhead">Customers can raise and follow their own tickets.</p><label>Name<input name="display_name" required autocomplete="name" placeholder="Your name"></label><label>Email<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label><label>Password<input type="password" name="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters"></label><button class="primary" type="submit">Create account</button><p id="register-error" class="form-error"></p><p class="account-switch">Already have an account? <button type="button" class="text-button" id="show-login">Sign in</button></p></form></section>
-<div id="app-shell" class="shell hidden"><aside class="sidebar"><div class="brand"><span class="brand-mark" aria-hidden="true"><i></i></span><div><strong>FRONTDESK</strong><small>SUPPORT OPERATIONS</small></div></div><nav><a class="active" href="#queue" data-view="all"><span class="nav-icon" aria-hidden="true">⌂</span><span>Ticket queue</span></a><a href="#waiting" data-view="waiting"><span class="nav-icon" aria-hidden="true">◷</span><span>Waiting on customer</span></a><a href="#closed" data-view="closed"><span class="nav-icon" aria-hidden="true">✓</span><span>Closed tickets</span></a></nav><div class="side-account"><div class="side-sla"><small>SLA HOURS</small><strong>09:30—18:30</strong><span>Monday to Friday</span></div><button id="profile" class="sidebar-action" type="button">View profile</button><button id="logout" class="sidebar-signout" type="button">Sign out</button></div></aside><main><header><div><p class="eyebrow">KHAJA'S WORKPLACE</p><h1 id="page-title">Ticket queue</h1><p class="subhead">One clear place to keep customer issues moving.</p></div></header><section class="toolbar"><label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search subject or customer email" aria-label="Search tickets"></label><button id="new-ticket" class="primary">New ticket</button></section><section id="stats" class="stats"></section><section class="queue-heading"><h2 id="queue-heading">All tickets</h2><span id="result-count"></span></section><section id="tickets" class="ticket-grid"></section></main></div>
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<dialog id="profile-dialog"><form method="dialog" class="profile-card"><button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Close">×</button><p class="eyebrow">ACCOUNT PROFILE</p><h2>Administrator profile</h2><div class="profile-avatar">K</div><dl><div><dt>Name</dt><dd>Khaja</dd></div><div><dt>Role</dt><dd>Administrator</dd></div><div><dt>Email</dt><dd>khawajarizwanali123@gmail.com</dd></div></dl><p class="profile-note">Profile editing is reserved for the next account-management phase.</p></form></dialog>
-<dialog id="ticket-dialog"><form method="dialog" id="ticket-form"><button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Close">×</button><p class="eyebrow">NEW CUSTOMER ISSUE</p><h2>Open a ticket</h2><label>Subject<input name="subject" required placeholder="What does the customer need?"></label><label>Customer email<input type="email" name="customer_email" required placeholder="name@example.com"></label><label>Priority<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label><label>Description<textarea name="description" required rows="5" placeholder="Add the useful context..."></textarea></label><button class="primary" type="submit">Create ticket</button></form></dialog>
-<dialog id="ticket-detail-dialog"><form method="dialog" id="ticket-detail-form"><button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Close">×</button><p class="eyebrow">TICKET DETAILS</p><h2 id="detail-subject">Ticket</h2><p id="detail-meta" class="subhead"></p><section id="detail-messages" class="detail-messages"></section><div id="detail-actions" class="detail-actions"><label>Reply or internal note<select id="detail-visibility"><option value="public">Public reply</option><option value="internal">Internal note</option></select></label><textarea id="detail-body" rows="4" placeholder="Write an update..."></textarea><button id="detail-send" class="primary" type="button">Add update</button><div class="detail-row"><label>Status<select id="detail-status"><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting_customer">Waiting on customer</option><option value="closed">Closed</option></select></label><label>Assign to<input id="detail-assignee" placeholder="Agent ID"></label></div><div class="detail-row"><button id="detail-status-save" type="button">Save status</button><button id="detail-assign" type="button">Assign ticket</button></div></div><section id="detail-audit" class="audit"></section></form></dialog><script src="/app.js"></script></body></html>
+  <!-- Lucide icon symbols are embedded below; see THIRD_PARTY_NOTICES.md. -->
+  <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><symbol id="icon-inbox" viewBox="0 0 24 24">
+  <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+  <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+</symbol><symbol id="icon-clock" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" />
+  <path d="M12 6v6l4 2" />
+</symbol><symbol id="icon-circle-check" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" />
+  <path d="m16 9-5.5 5.5L8 12" />
+</symbol><symbol id="icon-search" viewBox="0 0 24 24">
+  <path d="m21 21-4.34-4.34" />
+  <circle cx="11" cy="11" r="8" />
+</symbol><symbol id="icon-plus" viewBox="0 0 24 24">
+  <path d="M5 12h14" />
+  <path d="M12 5v14" />
+</symbol><symbol id="icon-user-round" viewBox="0 0 24 24">
+  <circle cx="12" cy="8" r="5" />
+  <path d="M20 21a8 8 0 0 0-16 0" />
+</symbol><symbol id="icon-log-out" viewBox="0 0 24 24">
+  <path d="m16 17 5-5-5-5" />
+  <path d="M21 12H9" />
+  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+</symbol><symbol id="icon-menu" viewBox="0 0 24 24">
+  <path d="M4 5h16" />
+  <path d="M4 12h16" />
+  <path d="M4 19h16" />
+</symbol><symbol id="icon-x" viewBox="0 0 24 24">
+  <path d="M18 6 6 18" />
+  <path d="m6 6 12 12" />
+</symbol><symbol id="icon-circle-alert" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" />
+  <line x1="12" x2="12" y1="8" y2="12" />
+  <line x1="12" x2="12.01" y1="16" y2="16" />
+</symbol><symbol id="icon-loader-circle" viewBox="0 0 24 24">
+  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+</symbol></defs></svg>
+  <section id="login-panel" class="login-panel">
+    <form id="login-form">
+      <p class="eyebrow">FRONTDESK ACCESS</p>
+      <h1>Sign in</h1>
+      <p class="subhead">Use your support workspace account.</p>
+      <label>Email<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <label>Password<input type="password" name="password" required autocomplete="current-password" placeholder="Your password" aria-describedby="login-error"></label>
+      <button class="primary" type="submit">Sign in</button>
+      <p id="login-error" class="form-error" role="alert"></p>
+      <div class="demo-note"><strong>Administrator access · Demo only</strong><span>Email: khawajarizwanali123@gmail.com</span><span>Password: configured privately in Render</span></div>
+      <p class="account-switch">Need a customer account? <button type="button" class="text-button" id="show-register">Create one</button></p>
+    </form>
+    <form id="register-form" class="hidden">
+      <p class="eyebrow">NEW CUSTOMER ACCOUNT</p><h1>Create account</h1>
+      <p class="subhead">Customers can raise and follow their own tickets.</p>
+      <label>Name<input name="display_name" required autocomplete="name" placeholder="Your name"></label>
+      <label>Email<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <label>Password<input type="password" name="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters" aria-describedby="register-error"></label>
+      <button class="primary" type="submit">Create account</button><p id="register-error" class="form-error" role="alert"></p>
+      <p class="account-switch">Already have an account? <button type="button" class="text-button" id="show-login">Sign in</button></p>
+    </form>
+  </section>
+  <div id="app-shell" class="shell hidden">
+    <a class="skip-link" href="#main-content">Skip to tickets</a>
+    <button id="nav-backdrop" class="nav-backdrop" tabindex="-1" aria-label="Close navigation" hidden></button>
+    <aside class="sidebar" id="sidebar" aria-label="Workspace navigation">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i></span><div><strong>FRONTDESK</strong><small>SUPPORT OPERATIONS</small></div></div>
+      <button id="close-nav" class="icon-button drawer-close" aria-label="Close navigation" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+      <nav aria-label="Ticket views">
+        <a class="active" href="#queue" data-view="all" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#icon-inbox"/></svg><span>Ticket queue</span></a>
+        <a href="#waiting" data-view="waiting"><svg class="icon" aria-hidden="true"><use href="#icon-clock"/></svg><span>Waiting on customer</span></a>
+        <a href="#closed" data-view="closed"><svg class="icon" aria-hidden="true"><use href="#icon-circle-check"/></svg><span>Closed tickets</span></a>
+      </nav>
+      <div class="side-account">
+        <div class="side-sla"><small><svg class="icon" aria-hidden="true"><use href="#icon-clock"/></svg>SLA HOURS</small><strong>09:30—18:30</strong><span>Monday to Friday</span><span class="sla-caption">Holidays excluded</span></div>
+        <button id="profile" class="sidebar-action" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-user-round"/></svg>View profile</button>
+        <button id="logout" class="sidebar-signout" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-log-out"/></svg>Sign out</button>
+      </div>
+    </aside>
+    <main id="main-content" tabindex="-1">
+      <header class="page-header"><button id="open-nav" class="icon-button menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#icon-menu"/></svg></button><div><p class="eyebrow">KHAJA'S WORKPLACE</p><h1 id="page-title">Ticket queue</h1><p class="subhead">One clear place to keep customer issues moving.</p></div></header>
+      <section class="toolbar" aria-label="Search and create tickets">
+        <label class="search"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg><input id="search" type="search" placeholder="Search tickets or customers…" aria-label="Search tickets"></label>
+        <button id="new-ticket" class="primary" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg>New ticket</button>
+      </section>
+      <section id="stats" class="stats" aria-label="Ticket summary"></section>
+      <section class="queue-section" aria-labelledby="queue-heading">
+        <div class="queue-heading"><h2 id="queue-heading">All tickets</h2><span id="result-count" role="status" aria-live="polite"></span></div>
+        <div class="filters" aria-label="Filter tickets">
+          <label><span>Status</span><select id="filter-status"><option value="active">Active tickets</option><option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting_customer">Waiting on customer</option><option value="closed">Closed</option></select></label>
+          <label><span>Priority</span><select id="filter-priority"><option value="all">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
+          <label><span>Assignee</span><select id="filter-assignee"><option value="all">All assignees</option><option value="unassigned">Unassigned</option></select></label>
+          <label class="sort-control"><span>Sort by</span><select id="filter-sort"><option value="recent">Recent activity</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="urgency">Urgency</option></select></label>
+          <button id="clear-filters" class="text-button" type="button" disabled>Clear filters</button>
+        </div>
+        <section id="tickets" class="ticket-grid" aria-label="Tickets" aria-busy="false"></section>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="profile-dialog" aria-labelledby="profile-title"><form method="dialog" class="profile-card"><button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Close">×</button><p class="eyebrow">ACCOUNT PROFILE</p><h2 id="profile-title">Your profile</h2><div id="profile-avatar" class="profile-avatar"></div><dl><div><dt>Name</dt><dd id="profile-name"></dd></div><div><dt>Role</dt><dd id="profile-role"></dd></div><div><dt>Email</dt><dd id="profile-email"></dd></div></dl><p class="profile-note">Contact your administrator to change account details.</p></form></dialog>
+  <dialog id="ticket-dialog" aria-labelledby="new-ticket-title">
+    <form method="dialog" id="ticket-form">
+      <button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Close">×</button>
+      <p class="eyebrow">NEW CUSTOMER ISSUE</p><h2 id="new-ticket-title">Open a ticket</h2>
+      <label>Subject<input name="subject" required placeholder="What does the customer need?"></label>
+      <label>Customer email<input type="email" name="customer_email" required placeholder="name@example.com"></label>
+      <label>Priority<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+      <label>Description<textarea name="description" required rows="5" placeholder="Add the useful context…"></textarea></label>
+      <p id="ticket-error" class="form-error" role="alert"></p><button class="primary" type="submit">Create ticket</button>
+    </form>
+  </dialog>
+  <dialog id="ticket-detail-dialog" aria-labelledby="detail-subject">
+    <form method="dialog" id="ticket-detail-form">
+      <button type="button" class="close" onclick="this.closest('dialog').close()" aria-label="Close">×</button>
+      <p class="eyebrow">TICKET DETAILS</p><h2 id="detail-subject">Ticket</h2><p id="detail-meta" class="subhead"></p><p id="detail-description" class="detail-description"></p>
+      <section id="detail-messages" class="detail-messages" aria-label="Conversation"></section>
+      <div id="detail-actions" class="detail-actions">
+        <label>Reply or internal note<select id="detail-visibility"><option value="public">Public reply</option><option value="internal">Internal note</option></select></label>
+        <label for="detail-body" class="sr-only">Update message</label><textarea id="detail-body" rows="4" placeholder="Write an update…"></textarea>
+        <button id="detail-send" class="primary" type="button">Add update</button>
+        <div class="detail-row"><label>Status<select id="detail-status"><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting_customer">Waiting on customer</option><option value="closed">Closed</option></select></label><label>Assign to<input id="detail-assignee" placeholder="Agent ID"></label></div>
+        <div class="detail-row"><button id="detail-status-save" class="secondary" type="button">Save status</button><button id="detail-assign" class="secondary" type="button">Assign ticket</button></div>
+      </div>
+      <p id="detail-error" class="form-error" role="alert"></p><section id="detail-audit"></section>
+    </form>
+  </dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

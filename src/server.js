@@ -19,7 +19,7 @@ export async function app(req, res) {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/health') return json(res,200,{status:'ok',storage,persistent:storage==='postgresql'});
   if (url.pathname === '/' || url.pathname === '/index.html') return readFile(join(root,'../public/index.html')).then(html=>{res.writeHead(200,{'content-type':'text/html'});res.end(html);});
-  if (url.pathname === '/app.js') return readFile(join(root,'../public/app.js')).then(html=>{res.writeHead(200,{'content-type':'text/javascript'});res.end(html);});
+  if (['/app.js', '/queue.js'].includes(url.pathname)) return readFile(join(root, '../public', url.pathname.slice(1))).then(html=>{res.writeHead(200,{'content-type':'text/javascript'});res.end(html);});
   if (url.pathname === '/styles.css') return readFile(join(root,'../public/styles.css')).then(css=>{res.writeHead(200,{'content-type':'text/css'});res.end(css);});
   if (!url.pathname.startsWith('/api/')) return json(res,404,{error:'Not found'});
   try {

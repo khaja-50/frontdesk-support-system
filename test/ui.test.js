@@ -6,7 +6,7 @@ const html = await readFile(new URL('../public/index.html', import.meta.url), 'u
 const javascript = await readFile(new URL('../public/app.js', import.meta.url), 'utf8');
 
 test('ticket modal has a non-submitting close button', () => {
-  assert.match(html, /<dialog id="ticket-dialog">/);
+  assert.match(html, /<dialog id="ticket-dialog"[^>]*>/);
   assert.match(html, /<button type="button" class="close" onclick="this\.closest\('dialog'\)\.close\(\)"/);
 });
 
