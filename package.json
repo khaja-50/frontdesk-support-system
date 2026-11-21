@@ -1,0 +1,14 @@
+{
+  "name": "frontdesk-support-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontdesk support ticket system for the full-stack assessment",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "NODE_ENV=test node --test",
+    "check": "node --check src/server.js"
+  },
+  "engines": { "node": ">=22" }
+}
