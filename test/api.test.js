@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { db, createTicket, addMessage, getTicket, assignTicket, updateStatus, closeInactiveTickets, reopenTicket } from '../src/db.js';
+import { db, createTicket, addMessage, getTicket, customerExport, assignTicket, updateStatus, closeInactiveTickets, reopenTicket } from '../src/db.js';
 
 test.before(() => { db.exec('DELETE FROM audit_events; DELETE FROM messages; DELETE FROM tickets;'); });
 test.after(() => db.close());
@@ -46,4 +46,13 @@ test('reopening is allowed within one working week only', () => {
   assert.equal(reopenTicket(ticket.id, 'customer', '2026-11-23T10:30:00.000Z').status, 'open');
   db.prepare("UPDATE tickets SET status='closed',closed_at=? WHERE id=?").run('2026-11-09T09:30:00.000Z', ticket.id);
   assert.equal(reopenTicket(ticket.id, 'customer', '2026-11-23T09:30:00.000Z'), false);
+});
+test('customer export contains public conversation only', () => {
+  const ticket = createTicket({subject:'Export me',customer_email:'f@example.com',description:'Question',priority:'normal'}, 'tester');
+  addMessage(ticket.id, {body:'Public answer',visibility:'public'}, 'agent');
+  addMessage(ticket.id, {body:'Private escalation',visibility:'internal'}, 'agent');
+  const exported = customerExport(ticket.id);
+  assert.equal(exported.messages.length, 1);
+  assert.equal(exported.messages[0].body, 'Public answer');
+  assert.equal('audit' in exported, false);
 });

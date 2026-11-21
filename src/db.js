@@ -29,6 +29,12 @@ export function getTicket(id, includeInternal = false) {
   ticket.audit = db.prepare('SELECT id,actor_id,action,details,created_at FROM audit_events WHERE ticket_id=? ORDER BY id').all(id);
   return ticket;
 }
+export function customerExport(id) {
+  const ticket = db.prepare('SELECT id,subject,customer_email,description,priority,status,created_at,updated_at,sla_due_at FROM tickets WHERE id=?').get(id);
+  if (!ticket) return null;
+  ticket.messages = db.prepare("SELECT author_id,body,created_at FROM messages WHERE ticket_id=? AND visibility='public' ORDER BY created_at").all(id);
+  return ticket;
+}
 export function createTicket(input, actorId='customer') {
   validateTicketInput(input);
   const created = now();
