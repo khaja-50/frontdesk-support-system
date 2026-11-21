@@ -28,10 +28,10 @@ function setLoading(button, loading) { button.classList.toggle('is-loading', loa
 
 function render(tickets) {
   const counts = { open: allTickets.filter((ticket) => ticket.status === 'open').length, active: allTickets.filter((ticket) => ticket.status === 'in_progress').length, urgent: allTickets.filter((ticket) => ticket.priority === 'urgent').length };
-  $('#stats').innerHTML = `<div class="stat"><small>Open queue</small><strong>${counts.open}</strong><span>Needs a first response</span></div><div class="stat"><small>In progress</small><strong>${counts.active}</strong><span>Being handled now</span></div><div class="stat"><small>Urgent</small><strong>${counts.urgent}</strong><span>Highest priority</span></div><div class="stat"><small>SLA policy</small><strong>09:30—18:30</strong><span>Working hours</span></div>`;
+  $('#stats').innerHTML = `<div class="stat"><small>Open queue</small><strong>${counts.open}</strong><span>Needs a first response</span></div><div class="stat"><small>In progress</small><strong>${counts.active}</strong><span>Being handled now</span></div><div class="stat"><small>Urgent</small><strong>${counts.urgent}</strong><span>Highest priority</span></div>`;
   $('#result-count').textContent = `${tickets.length} ticket${tickets.length === 1 ? '' : 's'}`;
   const empty = currentView === 'waiting' ? 'No tickets are waiting for a customer reply.' : currentView === 'closed' ? 'No closed tickets yet.' : 'No open tickets. Create a new ticket to start the queue.';
-  $('#tickets').innerHTML = tickets.length ? tickets.map((ticket) => `<article class="card" data-ticket-id="${ticket.id}" tabindex="0" role="button"><div class="card-top"><span class="ticket-id">#${ticket.id}</span>${ticket.priority === 'urgent' ? '<span class="urgency-dot" title="Urgent ticket" aria-label="Urgent ticket"></span>' : `<span class="badge ${ticket.priority}">${ticket.priority}</span>`}<span class="badge ${ticket.status}">${ticket.status.replace('_', ' ')}</span></div><h3>${escapeHtml(ticket.subject)}</h3><div class="card-summary"><span>${escapeHtml(ticket.customer_email)}</span><span>${ticket.assignee_id ? `Assigned to ${escapeHtml(ticket.assignee_id)}` : 'Unassigned'}</span></div></article>`).join('') : `<div class="empty">${empty}</div>`;
+  $('#tickets').innerHTML = tickets.length ? tickets.map((ticket) => `<article class="card" data-ticket-id="${ticket.id}" tabindex="0" role="button"><div class="card-top"><span class="ticket-id">SA-${ticket.id}</span>${ticket.priority === 'urgent' ? '<span class="urgency-dot" title="Urgent ticket" aria-label="Urgent ticket"></span>' : `<span class="badge ${ticket.priority}">${ticket.priority}</span>`}<span class="badge ${ticket.status}">${ticket.status.replace('_', ' ')}</span></div><h3>${escapeHtml(ticket.subject)}</h3><div class="card-summary"><span>${escapeHtml(ticket.customer_email)}</span><span>${ticket.assignee_id ? `Assigned to ${escapeHtml(ticket.assignee_id)}` : 'Unassigned'}</span></div></article>`).join('') : `<div class="empty">${empty}</div>`;
 }
 
 function filterTickets() {
@@ -49,17 +49,22 @@ function showMessages(messages) {
   $('#detail-messages').innerHTML = messages.length ? messages.map((message) => `<div class="message ${message.visibility}"><strong>${message.visibility === 'internal' ? 'Internal note' : 'Reply'}</strong><span>${fmt(message.created_at)}</span><p>${escapeHtml(message.body)}</p></div>`).join('') : '<p class="empty">No replies or notes yet.</p>';
 }
 
+function showAudit(audit) {
+  if (!audit.length) return '<section class="audit"><h3>History</h3><p class="empty">No history yet.</p></section>';
+  return `<section class="audit"><h3>History</h3><div class="timeline">${audit.map((event) => `<div class="timeline-item"><span class="timeline-dot"></span><div><strong>${escapeHtml(event.action.replaceAll('_', ' ').replaceAll('.', ' · ').toUpperCase())}</strong><p>${escapeHtml(event.actor_id)} · ${fmt(event.created_at)}</p></div></div>`).join('')}</div></section>`;
+}
+
 async function openTicket(id) {
   try {
     const ticket = await api(`/api/tickets/${id}`);
     currentTicketId = id;
     $('#detail-subject').textContent = ticket.subject;
-    $('#detail-meta').textContent = `#${ticket.id} · ${ticket.customer_email} · ${ticket.priority} · ${ticket.status.replace('_', ' ')}`;
+    $('#detail-meta').textContent = `SA-${ticket.id} · ${ticket.customer_email} · ${ticket.priority} · ${ticket.status.replace('_', ' ')}`.toUpperCase();
     $('#detail-status').value = ticket.status;
     $('#detail-assignee').value = ticket.assignee_id || '';
     showMessages(ticket.messages || []);
     $('#detail-actions').hidden = currentUser.role === 'customer';
-    $('#detail-audit').innerHTML = currentUser.role === 'customer' ? '' : `<h3>History</h3>${(ticket.audit || []).map((event) => `<p><strong>${escapeHtml(event.action)}</strong> by ${escapeHtml(event.actor_id)} · ${fmt(event.created_at)}</p>`).join('')}`;
+    $('#detail-audit').innerHTML = currentUser.role === 'customer' ? '' : showAudit(ticket.audit || []);
     $('#ticket-detail-dialog').showModal();
   } catch (error) { alert(error.message); }
 }
@@ -76,8 +81,9 @@ $('#search').oninput = filterTickets;
 $('#tickets').onclick = (event) => { const card = event.target.closest('[data-ticket-id]'); if (card) openTicket(card.dataset.ticketId); };
 $('#tickets').onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') { const card = event.target.closest('[data-ticket-id]'); if (card) openTicket(card.dataset.ticketId); } };
 document.querySelectorAll('[data-view]').forEach((link) => link.onclick = (event) => { event.preventDefault(); currentView = link.dataset.view; document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('active', item === link)); const title = currentView === 'waiting' ? 'Waiting on customer' : currentView === 'closed' ? 'Closed tickets' : 'Ticket queue'; $('#page-title').textContent = title; $('#queue-heading').textContent = title; filterTickets(); });
-$('#ticket-form').onsubmit = async (event) => { event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setLoading(button, true); try { await api('/api/tickets', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); event.target.closest('dialog').close(); event.target.reset(); await refresh(); showToast('Ticket created successfully', 'ticket'); } catch (error) { alert(error.message); } finally { setLoading(button, false); } };
+$('#ticket-form').onsubmit = async (event) => { event.preventDefault(); const button = event.target.querySelector('button[type="submit"]'); setLoading(button, true); try { const ticket = await api('/api/tickets', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); event.target.closest('dialog').close(); event.target.reset(); await refresh(); showToast(`Ticket SA-${ticket.id} created`, 'ticket'); } catch (error) { alert(error.message); } finally { setLoading(button, false); } };
 $('#detail-send').onclick = async () => { const body = $('#detail-body').value.trim(); if (!body) return; try { const ticket = await api(`/api/tickets/${currentTicketId}/messages`, { method: 'POST', body: JSON.stringify({ body, visibility: $('#detail-visibility').value }) }); showMessages(ticket.messages || []); $('#detail-body').value = ''; await refresh(); } catch (error) { alert(error.message); } };
 $('#detail-status-save').onclick = async () => { try { await api(`/api/tickets/${currentTicketId}/status`, { method: 'POST', body: JSON.stringify({ status: $('#detail-status').value }) }); await refresh(); await openTicket(currentTicketId); } catch (error) { alert(error.message); } };
 $('#detail-assign').onclick = async () => { const assigneeId = $('#detail-assignee').value.trim(); if (!assigneeId) return; try { await api(`/api/tickets/${currentTicketId}/assign`, { method: 'POST', body: JSON.stringify({ assignee_id: assigneeId }) }); await refresh(); await openTicket(currentTicketId); } catch (error) { alert(error.message); } };
+$('#profile').onclick = () => $('#profile-dialog').showModal();
 api('/api/auth/me').then(showDashboard).catch(() => $('#login-panel').classList.remove('hidden'));
