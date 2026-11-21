@@ -44,6 +44,9 @@ export async function listTickets(customerEmail = null) {
   if (usePostgres) return customerEmail ? (await pgQuery('SELECT * FROM tickets WHERE lower(customer_email)=lower($1) ORDER BY updated_at DESC', [customerEmail])).rows : (await pgQuery('SELECT * FROM tickets ORDER BY updated_at DESC')).rows;
   return customerEmail ? db.prepare('SELECT * FROM tickets WHERE lower(customer_email)=lower(?) ORDER BY updated_at DESC').all(customerEmail) : db.prepare('SELECT * FROM tickets ORDER BY updated_at DESC').all();
 }
+export async function ticketCount() {
+  return usePostgres ? Number((await pgQuery('SELECT COUNT(*)::int AS count FROM tickets')).rows[0].count) : db.prepare('SELECT COUNT(*) AS count FROM tickets').get().count;
+}
 export async function findUserByEmail(email) {
   if (usePostgres) return (await pgQuery('SELECT id,email,password_hash,display_name,role FROM users WHERE lower(email)=lower($1)', [email])).rows[0] || null;
   return db.prepare('SELECT id,email,password_hash,display_name,role FROM users WHERE lower(email)=lower(?)').get(email) || null;
@@ -101,3 +104,17 @@ export async function updateStatus(id, status, actorId) {
 }
 export async function closeInactiveTickets(asOf = now(), actorId = 'system') { const candidates = usePostgres ? (await pgQuery("SELECT id,updated_at FROM tickets WHERE status IN ('open','in_progress','waiting_customer')")).rows : db.prepare("SELECT id,updated_at FROM tickets WHERE status IN ('open','in_progress','waiting_customer')").all(); let closed = 0; for (const ticket of candidates) if (workingMinutesBetween(ticket.updated_at, asOf, await holidays()) >= 5 * 540) { await updateStatus(ticket.id, 'closed', actorId); closed += 1; } return closed; }
 export async function reopenTicket(id, actorId, asOf = now()) { const ticket = usePostgres ? (await pgQuery('SELECT * FROM tickets WHERE id=$1', [id])).rows[0] : db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null; if (ticket.status !== 'closed') return getTicket(id, true); if (workingMinutesBetween(ticket.closed_at, asOf, await holidays()) > 5 * 540) return false; const updated = now(); if (usePostgres) { await pgQuery("UPDATE tickets SET status='open',closed_at=NULL,updated_at=$1 WHERE id=$2", [updated, id]); await pgAudit(id, actorId, 'ticket.reopened', {}); } else { db.prepare("UPDATE tickets SET status='open',closed_at=NULL,updated_at=? WHERE id=?").run(updated, id); sqliteAudit(id, actorId, 'ticket.reopened', {}); } return getTicket(id, true); }
+export async function seedDemoTickets(actorId) {
+  if (await ticketCount() > 0) return false;
+  const samples = [
+    { subject: 'Unable to download monthly invoice', customer_email: 'maya.demo@example.com', description: 'The invoice link opens, but the PDF download never starts.', priority: 'high', status: 'waiting_customer', message: 'Could you confirm which browser and device you are using?' },
+    { subject: 'Update billing contact', customer_email: 'rohan.demo@example.com', description: 'Please update the billing contact for the Northstar workspace.', priority: 'normal', status: 'closed', message: 'The billing contact was updated and the request is now complete.' },
+    { subject: 'Login alert after password reset', customer_email: 'leena.demo@example.com', description: 'A customer needs help understanding a sign-in alert after resetting a password.', priority: 'urgent', status: 'open', message: null }
+  ];
+  for (const sample of samples) {
+    const ticket = await createTicket(sample, actorId);
+    if (sample.message) await addMessage(ticket.id, { body: sample.message, visibility: 'public' }, actorId);
+    await updateStatus(ticket.id, sample.status, actorId);
+  }
+  return true;
+}

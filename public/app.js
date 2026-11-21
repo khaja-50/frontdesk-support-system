@@ -57,6 +57,9 @@ async function openTicket(id) {
 function showDashboard(user) { currentUser = user; $('#login-panel').classList.add('hidden'); $('#app-shell').classList.remove('hidden'); $('#current-user').textContent = `${user.display_name} · ${user.role}`; refresh(); }
 
 $('#login-form').onsubmit = async (event) => { event.preventDefault(); $('#login-error').textContent = ''; try { showDashboard(await api('/api/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) })); } catch (error) { $('#login-error').textContent = error.message; } };
+$('#register-form').onsubmit = async (event) => { event.preventDefault(); $('#register-error').textContent = ''; try { showDashboard(await api('/api/auth/register', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) })); } catch (error) { $('#register-error').textContent = error.message; } };
+$('#show-register').onclick = () => { $('#login-form').classList.add('hidden'); $('#register-form').classList.remove('hidden'); };
+$('#show-login').onclick = () => { $('#register-form').classList.add('hidden'); $('#login-form').classList.remove('hidden'); };
 $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.reload(); };
 $('#new-ticket').onclick = () => $('#ticket-dialog').showModal();
 $('#search').oninput = filterTickets;

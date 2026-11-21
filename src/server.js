@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { ready, storage, listTickets, getTicket, customerExport, createTicket, assignTicket, addMessage, updateStatus, reopenTicket } from './db.js';
-import { authReady, login, logout, registerUser, userFromToken } from './auth.js';
+import { authReady, login, logout, registerCustomer, registerUser, userFromToken } from './auth.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const json = (res, status, value) => { res.writeHead(status, {'content-type':'application/json; charset=utf-8'}); res.end(JSON.stringify(value)); };
@@ -24,6 +24,7 @@ export async function app(req, res) {
   if (!url.pathname.startsWith('/api/')) return json(res,404,{error:'Not found'});
   try {
     if (req.method==='POST' && url.pathname==='/api/auth/login') { const input = await body(req); const session = await login(input.email || '', input.password || ''); return session ? (res.setHeader('set-cookie', sessionCookie(session.token)), json(res,200,session.user)) : deny(res,401,'Email or password is incorrect'); }
+    if (req.method==='POST' && url.pathname==='/api/auth/register') { const input = await body(req); return json(res,201,await registerCustomer(input)); }
     if (req.method==='POST' && url.pathname==='/api/auth/logout') { await logout(cookies(req).frontdesk_session); res.setHeader('set-cookie', sessionCookie('', 0)); return json(res,200,{ok:true}); }
     if (req.method==='GET' && url.pathname==='/api/auth/me') { const user = await currentUser(req); return user ? json(res,200,user) : deny(res,401,'Login required'); }
     if (req.method==='POST' && url.pathname==='/api/users') { const user = needsRole(res, await currentUser(req), ['admin']); if (!user) return; return json(res,201,await registerUser(await body(req))); }
