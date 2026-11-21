@@ -52,6 +52,14 @@ export function addMessage(id, input, actorId) {
   audit(id, actorId, input.visibility === 'internal' ? 'note.added' : 'reply.sent', { visibility: input.visibility || 'public' });
   return getTicket(id, true);
 }
+export function updateStatus(id, status, actorId) {
+  if (!['open', 'in_progress', 'waiting_customer', 'closed'].includes(status)) throw new Error('status is invalid');
+  const ticket = db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null;
+  const closedAt = status === 'closed' ? now() : null;
+  db.prepare('UPDATE tickets SET status=?,closed_at=?,updated_at=? WHERE id=?').run(status, closedAt, now(), id);
+  audit(id, actorId, 'ticket.status_changed', { from: ticket.status, to: status });
+  return getTicket(id, true);
+}
 export function reopenTicket(id, actorId) {
   const ticket = db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null;
   if (ticket.status !== 'closed') return getTicket(id, true);
