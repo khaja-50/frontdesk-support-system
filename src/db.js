@@ -70,9 +70,9 @@ export function closeInactiveTickets(asOf = now(), actorId = 'system') {
   }
   return closed;
 }
-export function reopenTicket(id, actorId) {
+export function reopenTicket(id, actorId, asOf = now()) {
   const ticket = db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null;
   if (ticket.status !== 'closed') return getTicket(id, true);
-  if ((Date.now() - Date.parse(ticket.closed_at)) > 7 * 24 * 60 * 60 * 1000) return false;
+  if (workingMinutesBetween(ticket.closed_at, asOf, holidays()) > 5 * 540) return false;
   db.prepare("UPDATE tickets SET status='open',closed_at=NULL,updated_at=? WHERE id=?").run(now(), id); audit(id, actorId, 'ticket.reopened', {}); return getTicket(id, true);
 }

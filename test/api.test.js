@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { db, createTicket, addMessage, getTicket, assignTicket, updateStatus, closeInactiveTickets } from '../src/db.js';
+import { db, createTicket, addMessage, getTicket, assignTicket, updateStatus, closeInactiveTickets, reopenTicket } from '../src/db.js';
 
 test.before(() => { db.exec('DELETE FROM audit_events; DELETE FROM messages; DELETE FROM tickets;'); });
 test.after(() => db.close());
@@ -39,4 +39,11 @@ test('inactivity closes a ticket after one working week', () => {
   db.prepare('UPDATE tickets SET updated_at=? WHERE id=?').run('2026-11-13T09:30:00.000Z', ticket.id);
   assert.equal(closeInactiveTickets('2026-11-23T09:30:00.000Z', 'system'), 1);
   assert.equal(getTicket(ticket.id, true).status, 'closed');
+});
+test('reopening is allowed within one working week only', () => {
+  const ticket = createTicket({subject:'Reopen me',customer_email:'e@example.com',description:'Follow-up',priority:'normal'}, 'tester');
+  db.prepare("UPDATE tickets SET status='closed',closed_at=? WHERE id=?").run('2026-11-20T17:30:00.000Z', ticket.id);
+  assert.equal(reopenTicket(ticket.id, 'customer', '2026-11-23T10:30:00.000Z').status, 'open');
+  db.prepare("UPDATE tickets SET status='closed',closed_at=? WHERE id=?").run('2026-11-09T09:30:00.000Z', ticket.id);
+  assert.equal(reopenTicket(ticket.id, 'customer', '2026-11-23T09:30:00.000Z'), false);
 });
