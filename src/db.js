@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { addWorkingMinutes } from './sla.js';
+import { workingMinutesBetween } from './sla.js';
 
 mkdirSync('data', { recursive: true });
 export const db = new DatabaseSync(process.env.DB_FILE || 'data/frontdesk.sqlite');
@@ -59,6 +60,15 @@ export function updateStatus(id, status, actorId) {
   db.prepare('UPDATE tickets SET status=?,closed_at=?,updated_at=? WHERE id=?').run(status, closedAt, now(), id);
   audit(id, actorId, 'ticket.status_changed', { from: ticket.status, to: status });
   return getTicket(id, true);
+}
+export function closeInactiveTickets(asOf = now(), actorId = 'system') {
+  const threshold = 5 * 540;
+  const candidates = db.prepare("SELECT id,updated_at FROM tickets WHERE status IN ('open','in_progress','waiting_customer')").all();
+  let closed = 0;
+  for (const ticket of candidates) {
+    if (workingMinutesBetween(ticket.updated_at, asOf, holidays()) >= threshold) { updateStatus(ticket.id, 'closed', actorId); closed += 1; }
+  }
+  return closed;
 }
 export function reopenTicket(id, actorId) {
   const ticket = db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null;

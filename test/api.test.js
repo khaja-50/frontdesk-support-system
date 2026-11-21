@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { db, createTicket, addMessage, getTicket, assignTicket, updateStatus } from '../src/db.js';
+import { db, createTicket, addMessage, getTicket, assignTicket, updateStatus, closeInactiveTickets } from '../src/db.js';
 
 test.before(() => { db.exec('DELETE FROM audit_events; DELETE FROM messages; DELETE FROM tickets;'); });
 test.after(() => db.close());
@@ -33,4 +33,10 @@ test('status transitions record waiting and closure in the audit trail', () => {
   const saved = getTicket(ticket.id, true);
   assert.equal(saved.audit.at(-1).action, 'ticket.status_changed');
   assert.equal(JSON.parse(saved.audit.at(-1).details).to, 'closed');
+});
+test('inactivity closes a ticket after one working week', () => {
+  const ticket = createTicket({subject:'Old request',customer_email:'d@example.com',description:'No response',priority:'normal'}, 'tester');
+  db.prepare('UPDATE tickets SET updated_at=? WHERE id=?').run('2026-11-13T09:30:00.000Z', ticket.id);
+  assert.equal(closeInactiveTickets('2026-11-23T09:30:00.000Z', 'system'), 1);
+  assert.equal(getTicket(ticket.id, true).status, 'closed');
 });
