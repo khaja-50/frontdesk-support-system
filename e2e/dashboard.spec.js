@@ -19,9 +19,15 @@ test('layout, sidebar controls and profile remain usable at every viewport', asy
   await signIn(page);
   await noOverflow(page);
   await expect(page.locator('.stat')).toHaveCount(3);
-  const heading = await page.locator('.stat small').first().evaluate(el => getComputedStyle(el).fontWeight);
-  const number = await page.locator('.stat strong').first().evaluate(el => getComputedStyle(el).fontWeight);
-  expect(Number(number)).toBeGreaterThan(Number(heading));
+  const metricStyles = await page.locator('.stat').first().evaluate(card => {
+    const heading = getComputedStyle(card.querySelector('small'));
+    const number = getComputedStyle(card.querySelector('strong'));
+    return { headingWeight: Number(heading.fontWeight), numberWeight: Number(number.fontWeight), headingSize: parseFloat(heading.fontSize), numberSize: parseFloat(number.fontSize), background: getComputedStyle(card).backgroundColor };
+  });
+  expect(metricStyles.headingWeight).toBeGreaterThanOrEqual(600);
+  expect(metricStyles.numberWeight).toBeGreaterThanOrEqual(600);
+  expect(metricStyles.numberSize).toBeGreaterThan(metricStyles.headingSize);
+  expect(metricStyles.background).toBe('rgb(255, 255, 255)');
   await page.evaluate(() => document.fonts.ready);
   expect(await page.evaluate(() => document.fonts.check('14px Inter'))).toBe(true);
   expect(await page.locator('.card h3').first().evaluate(el => getComputedStyle(el).fontSize)).toBe('17px');
