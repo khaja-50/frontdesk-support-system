@@ -1,5 +1,7 @@
 # Third-party notices
 
+The local Inter font is from @fontsource-variable/inter 5.3.0 (https://fontsource.org/fonts/inter) and is licensed under the SIL Open Font License 1.1. The full license is in `public/fonts/OFL.txt`.
+
 Inline icons are from lucide-static 1.77.0 (https://lucide.dev).
 
 ISC License

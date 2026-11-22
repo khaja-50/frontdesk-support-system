@@ -21,6 +21,7 @@ export async function app(req, res) {
   if (url.pathname === '/' || url.pathname === '/index.html') return readFile(join(root,'../public/index.html')).then(html=>{res.writeHead(200,{'content-type':'text/html'});res.end(html);});
   if (['/app.js', '/queue.js'].includes(url.pathname)) return readFile(join(root, '../public', url.pathname.slice(1))).then(html=>{res.writeHead(200,{'content-type':'text/javascript'});res.end(html);});
   if (url.pathname === '/styles.css') return readFile(join(root,'../public/styles.css')).then(css=>{res.writeHead(200,{'content-type':'text/css'});res.end(css);});
+  if (url.pathname === '/fonts/inter-latin-wght-normal.woff2') return readFile(join(root,'../public/fonts/inter-latin-wght-normal.woff2')).then(font=>{res.writeHead(200,{'content-type':'font/woff2','cache-control':'public, max-age=31536000, immutable'});res.end(font);});
   if (!url.pathname.startsWith('/api/')) return json(res,404,{error:'Not found'});
   try {
     if (req.method==='POST' && url.pathname==='/api/auth/login') { const input = await body(req); const session = await login(input.email || '', input.password || ''); return session ? (res.setHeader('set-cookie', sessionCookie(session.token)), json(res,200,session.user)) : deny(res,401,'Email or password is incorrect'); }
