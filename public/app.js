@@ -46,9 +46,9 @@ async function runAction(button, errorSelector, action) {
 function renderMetrics() {
   const counts = ticketCounts(allTickets);
   const metrics = [
-    { id: 'open', label: 'Open queue', count: counts.open, caption: 'Awaiting first response', selected: filters.status === 'open' },
-    { id: 'active', label: 'In progress', count: counts.active, caption: 'Currently being handled', selected: filters.status === 'in_progress' },
-    { id: 'urgent', label: 'Urgent', count: counts.urgent, caption: 'Requires immediate attention', selected: filters.priority === 'urgent' },
+    { id: 'open', label: 'Open queue', count: counts.open, caption: 'Needs a first response', selected: filters.status === 'open' },
+    { id: 'active', label: 'In progress', count: counts.active, caption: 'Being handled now', selected: filters.status === 'in_progress' },
+    { id: 'urgent', label: 'Urgent', count: counts.urgent, caption: 'Highest priority', selected: filters.priority === 'urgent' },
   ];
   $('#stats').innerHTML = metrics.map((metric) => `<button type="button" class="stat" data-metric="${metric.id}" aria-pressed="${metric.selected}" aria-label="Filter ${metric.label}: ${metric.count} tickets"><small>${metric.label}</small><strong>${metric.count}</strong><span>${metric.caption}</span></button>`).join('');
 }
