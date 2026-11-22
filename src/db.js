@@ -61,6 +61,10 @@ export async function createUser({ id, email, passwordHash, displayName, role })
   if (usePostgres) return (await pgQuery('INSERT INTO users(id,email,password_hash,display_name,role,created_at) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,email,display_name,role', [id, email, passwordHash, displayName, role, now()])).rows[0];
   return db.prepare('INSERT INTO users(id,email,password_hash,display_name,role,created_at) VALUES(?,?,?,?,?,?)').run(id, email, passwordHash, displayName, role, now());
 }
+export async function updateUserPasswordHash(id, passwordHash) {
+  if (usePostgres) await pgQuery('UPDATE users SET password_hash=$1 WHERE id=$2', [passwordHash, id]);
+  else db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, id);
+}
 export async function createSession(tokenHash, userId, expiresAt) {
   if (usePostgres) await pgQuery('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,$3)', [tokenHash, userId, expiresAt]);
   else db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(tokenHash, userId, expiresAt);

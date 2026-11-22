@@ -1,8 +1,8 @@
 // Isolated browser fixtures: always use an in-memory database, never deployment data.
 process.env.NODE_ENV = 'test';
 process.env.DB_FILE = ':memory:';
-process.env.ADMIN_EMAIL = 'reviewer@example.test';
-process.env.ADMIN_PASSWORD = 'Browser-check-only-123!';
+process.env.ADMIN_EMAIL = 'khawajarizwanali123@gmail.com';
+process.env.ADMIN_PASSWORD = '1234';
 process.env.ADMIN_NAME = 'Test reviewer';
 const { createServer } = await import('node:http');
 const { app } = await import('../src/server.js');

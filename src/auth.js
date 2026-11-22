@@ -1,5 +1,5 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { createSession, createUser, deleteSession, findUserByEmail, findUserBySession, ready, seedDemoTickets } from './db.js';
+import { createSession, createUser, deleteSession, findUserByEmail, findUserBySession, ready, seedDemoTickets, updateUserPasswordHash } from './db.js';
 
 const SESSION_DAYS = 7;
 const hashToken = token => createHash('sha256').update(token).digest('hex');
@@ -12,8 +12,13 @@ function verifyPassword(password, stored) {
 }
 
 export const authReady = ready.then(async () => {
-  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD || await findUserByEmail(process.env.ADMIN_EMAIL)) return;
-  await createUser({ id: 'admin', email: process.env.ADMIN_EMAIL, passwordHash: hashPassword(process.env.ADMIN_PASSWORD), displayName: process.env.ADMIN_NAME || 'Administrator', role: 'admin' });
+  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) return;
+  const admin = await findUserByEmail(process.env.ADMIN_EMAIL);
+  if (!admin) {
+    await createUser({ id: 'admin', email: process.env.ADMIN_EMAIL, passwordHash: hashPassword(process.env.ADMIN_PASSWORD), displayName: process.env.ADMIN_NAME || 'Administrator', role: 'admin' });
+  } else if (admin.role === 'admin' && !verifyPassword(process.env.ADMIN_PASSWORD, admin.password_hash)) {
+    await updateUserPasswordHash(admin.id, hashPassword(process.env.ADMIN_PASSWORD));
+  }
 }).then(async () => {
   if (process.env.NODE_ENV !== 'test' && process.env.ADMIN_EMAIL) {
     const admin = await findUserByEmail(process.env.ADMIN_EMAIL);

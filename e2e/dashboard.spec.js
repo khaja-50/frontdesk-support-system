@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const admin = { email: 'reviewer@example.test', password: 'Browser-check-only-123!' };
+const admin = { email: 'khawajarizwanali123@gmail.com', password: '1234' };
 async function signIn(page) {
   await page.goto('/');
   await page.locator('#login-form [name="email"]').fill(admin.email);
@@ -21,7 +21,11 @@ test('layout, sidebar controls and profile remain usable at every viewport', asy
   await expect(page.locator('.stat')).toHaveCount(3);
   const heading = await page.locator('.stat small').first().evaluate(el => getComputedStyle(el).fontWeight);
   const number = await page.locator('.stat strong').first().evaluate(el => getComputedStyle(el).fontWeight);
-  expect(Number(heading)).toBeGreaterThan(Number(number));
+  expect(Number(number)).toBeGreaterThan(Number(heading));
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check('14px Inter'))).toBe(true);
+  expect(await page.locator('.card h3').first().evaluate(el => getComputedStyle(el).fontSize)).toBe('17px');
+  expect(await page.locator('.filters select').first().evaluate(el => getComputedStyle(el).fontSize)).toBe('14px');
   await expect(page.locator('#toast')).not.toHaveClass(/show/);
   await page.screenshot({ path: testInfo.outputPath('dashboard.png'), fullPage: true });
   await navigation(page);
