@@ -28,7 +28,7 @@ export const authReady = ready.then(async () => {
 
 export async function registerUser(input) {
   if (!input.email || !input.password || !input.display_name || !input.role) throw new Error('email, password, display_name, and role are required');
-  if (input.password.length < 10) throw new Error('password must be at least 10 characters');
+  if (typeof input.password !== 'string' || !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(input.password)) throw new Error('password must be at least 6 characters with letters and numbers only');
   return createUser({ id: input.id || randomBytes(12).toString('hex'), email: input.email.trim().toLowerCase(), passwordHash: hashPassword(input.password), displayName: input.display_name.trim(), role: input.role });
 }
 export async function registerCustomer(input) { return registerUser({ ...input, role: 'customer' }); }

@@ -11,17 +11,22 @@ test.before(async () => { await Promise.all([ready, authReady]); db.exec('DELETE
 test.after(() => db.close());
 
 test('password login returns a session and role without exposing the password hash', async () => {
-  await registerUser({ id: 'agent-1', email: 'agent@example.com', password: 'correct horse battery staple', display_name: 'Support Agent', role: 'agent' });
+  await registerUser({ id: 'agent-1', email: 'agent@example.com', password: 'Agent123', display_name: 'Support Agent', role: 'agent' });
   assert.equal(await login('agent@example.com', 'wrong password'), null);
-  const session = await login('agent@example.com', 'correct horse battery staple');
+  const session = await login('agent@example.com', 'Agent123');
   assert.equal(session.user.role, 'agent');
   assert.equal('password_hash' in session.user, false);
   assert.equal((await userFromToken(session.token)).email, 'agent@example.com');
 });
 
-test('user registration requires a strong password and approved role', async () => {
-  await assert.rejects(() => registerUser({ email: 'short@example.com', password: 'short', display_name: 'Short', role: 'customer' }), /at least 10/);
-  await assert.rejects(() => registerUser({ email: 'bad@example.com', password: 'long enough password', display_name: 'Bad', role: 'owner' }), /role is invalid/);
+test('registration accepts six-character alphanumeric passwords and approved roles', async () => {
+  await assert.rejects(() => registerUser({ email: 'short@example.com', password: 'Ab123', display_name: 'Short', role: 'customer' }), /at least 6/);
+  await assert.rejects(() => registerUser({ email: 'letters@example.com', password: 'abcdef', display_name: 'Letters', role: 'customer' }), /letters and numbers/);
+  await assert.rejects(() => registerUser({ email: 'digits@example.com', password: '123456', display_name: 'Digits', role: 'customer' }), /letters and numbers/);
+  await assert.rejects(() => registerUser({ email: 'symbols@example.com', password: 'Ab123!', display_name: 'Symbols', role: 'customer' }), /letters and numbers only/);
+  await registerUser({ email: 'six@example.com', password: 'Ab1234', display_name: 'Six', role: 'customer' });
+  assert.equal((await login('six@example.com', 'Ab1234')).user.role, 'customer');
+  await assert.rejects(() => registerUser({ email: 'bad@example.com', password: 'Valid123', display_name: 'Bad', role: 'owner' }), /role is invalid/);
 });
 
 test('administrator password follows the configured value after restart', () => {

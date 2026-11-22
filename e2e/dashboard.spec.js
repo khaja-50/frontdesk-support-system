@@ -151,7 +151,7 @@ test('login errors are spaced and registration preserves customer access', async
   await page.locator('#show-register').click();
   await page.locator('#register-form [name="display_name"]').fill('Browser customer');
   await page.locator('#register-form [name="email"]').fill(`customer-${testInfo.project.name}@example.test`);
-  await page.locator('#register-form [name="password"]').fill('Customer-test-only-123!');
+  await page.locator('#register-form [name="password"]').fill('Ab1234');
   await page.locator('#register-form [type="submit"]').click();
   await expect(page.locator('#app-shell')).toBeVisible();
   await expect(page.locator('.card')).toHaveCount(0);
