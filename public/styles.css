@@ -75,10 +75,10 @@ input::placeholder, textarea::placeholder { color: #767676; opacity: 1; }
 .text-button:hover:not(:disabled) { background: var(--hover); }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px; }
 .stat { display: grid; justify-items: center; gap: 8px; padding: 20px 16px; border: 1px solid var(--line); border-radius: var(--card-radius); background: var(--soft); color: var(--ink); text-align: center; }
-.stat small { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; font-weight: 700; }
-.stat small .icon { width: 15px; height: 15px; color: var(--muted); }
+.stat small { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1.5; font-weight: 700; }
+.stat small .icon { width: 17px; height: 17px; color: var(--muted); }
 .stat strong { font-size: 32px; line-height: 1.15; font-weight: 400; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.stat > span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.stat > span { color: var(--muted); font-size: 13px; line-height: 1.5; }
 .stat:hover { border-color: #b4b4ae; background: #fdfdfc; }
 .stat[aria-pressed="true"] { border-color: #555; box-shadow: inset 0 0 0 1px #555; }
 .queue-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -152,6 +152,8 @@ dialog .eyebrow { margin: 0; }
 .message.internal { border-left: 3px solid #888; }
 .detail-actions { display: grid; gap: 16px; }
 .detail-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.archive-action { width: max-content; color: #8b3434; border-color: #ead7d7; }
+.archive-action:hover:not(:disabled) { color: #792b2b; background: #fcf3f3; border-color: #d6aaaa; }
 .audit { display: grid; gap: 20px; border-top: 1px solid var(--line); padding-top: 24px; }
 .timeline-item { position: relative; display: grid; grid-template-columns: 16px minmax(0,1fr); gap: 16px; padding-bottom: 24px; }
 .timeline-item:not(:last-child)::before { content: ''; position: absolute; left: 7px; top: 14px; bottom: 0; width: 1px; background: #d5d5cf; }
