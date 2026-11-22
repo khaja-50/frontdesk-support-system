@@ -193,3 +193,20 @@ test('failed queue requests can be retried and failed creation preserves input',
   await expect(page.locator('#ticket-form [name="subject"]')).toHaveValue('Keep this draft');
   await expect(page.locator('#ticket-form [type="submit"]')).toBeEnabled();
 });
+
+
+test('administrator can archive a selected ticket without changing other tickets', async ({ page }) => {
+  await signIn(page);
+  await page.locator('#filter-status').selectOption('all');
+  const before = await page.locator('.card').count();
+  const id = await page.locator('.card').first().getAttribute('data-ticket-id');
+  await page.locator('.card').first().click();
+  await expect(page.locator('#detail-archive')).toBeVisible();
+  await page.locator('#detail-archive').click();
+  await expect(page.locator('#ticket-detail-dialog')).not.toBeVisible();
+  await expect(page.locator('.card')).toHaveCount(before - 1);
+  await expect(page.locator(`[data-ticket-id="${id}"]`)).toHaveCount(0);
+  await expect(page.locator('#toast')).toContainText('archived');
+  const response = await page.request.get(`/api/tickets/${id}`);
+  expect(response.status()).toBe(404);
+});

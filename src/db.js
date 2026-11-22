@@ -6,7 +6,7 @@ import { addWorkingMinutes, workingMinutesBetween } from './sla.js';
 const usePostgres = Boolean(process.env.DATABASE_URL) && process.env.NODE_ENV !== 'test';
 export const storage = usePostgres ? 'postgresql' : 'sqlite';
 const schema = `
-CREATE TABLE IF NOT EXISTS tickets (id BIGSERIAL PRIMARY KEY, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL, sla_due_at TIMESTAMPTZ NOT NULL, closed_at TIMESTAMPTZ);
+CREATE TABLE IF NOT EXISTS tickets (id BIGSERIAL PRIMARY KEY, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL, sla_due_at TIMESTAMPTZ NOT NULL, closed_at TIMESTAMPTZ, archived_at TIMESTAMPTZ);
 CREATE TABLE IF NOT EXISTS messages (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES tickets(id), author_id TEXT NOT NULL, body TEXT NOT NULL, visibility TEXT NOT NULL CHECK(visibility IN ('public','internal')), created_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_events (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES tickets(id), actor_id TEXT NOT NULL, action TEXT NOT NULL, details JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE IF NOT EXISTS holidays (date DATE PRIMARY KEY, label TEXT NOT NULL);
@@ -17,7 +17,7 @@ export const db = usePostgres ? null : (() => {
   mkdirSync('data', { recursive: true });
   const sqlite = new DatabaseSync(process.env.DB_FILE || 'data/frontdesk.sqlite');
   sqlite.exec(`PRAGMA foreign_keys = ON;
-    CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, sla_due_at TEXT NOT NULL, closed_at TEXT);
+    CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, customer_email TEXT NOT NULL, description TEXT NOT NULL, priority TEXT NOT NULL DEFAULT 'normal', status TEXT NOT NULL DEFAULT 'open', assignee_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, sla_due_at TEXT NOT NULL, closed_at TEXT, archived_at TEXT);
     CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL REFERENCES tickets(id), author_id TEXT NOT NULL, body TEXT NOT NULL, visibility TEXT NOT NULL CHECK(visibility IN ('public','internal')), created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS audit_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL REFERENCES tickets(id), actor_id TEXT NOT NULL, action TEXT NOT NULL, details TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS holidays (date TEXT PRIMARY KEY, label TEXT NOT NULL);
@@ -26,8 +26,10 @@ export const db = usePostgres ? null : (() => {
   return sqlite;
 })();
 
+if (db && !db.prepare("PRAGMA table_info(tickets)").all().some(column => column.name === 'archived_at')) db.exec('ALTER TABLE tickets ADD COLUMN archived_at TEXT');
+
 const pool = usePostgres ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined }) : null;
-export const ready = usePostgres ? pool.query(schema) : Promise.resolve();
+export const ready = usePostgres ? pool.query(schema).then(() => pool.query('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ')) : Promise.resolve();
 const now = () => new Date().toISOString();
 const sqliteHolidays = () => db.prepare('SELECT date FROM holidays').all().map(x => x.date);
 async function pgQuery(text, values = []) { await ready; return pool.query(text, values); }
@@ -41,11 +43,11 @@ function sqliteAudit(ticketId, actorId, action, details) { return db.prepare('IN
 async function pgAudit(ticketId, actorId, action, details) { await pgQuery('INSERT INTO audit_events(ticket_id,actor_id,action,details,created_at) VALUES($1,$2,$3,$4,$5)', [ticketId, actorId, action, details, now()]); }
 
 export async function listTickets(customerEmail = null) {
-  if (usePostgres) return customerEmail ? (await pgQuery('SELECT * FROM tickets WHERE lower(customer_email)=lower($1) ORDER BY updated_at DESC', [customerEmail])).rows : (await pgQuery('SELECT * FROM tickets ORDER BY updated_at DESC')).rows;
-  return customerEmail ? db.prepare('SELECT * FROM tickets WHERE lower(customer_email)=lower(?) ORDER BY updated_at DESC').all(customerEmail) : db.prepare('SELECT * FROM tickets ORDER BY updated_at DESC').all();
+  if (usePostgres) return customerEmail ? (await pgQuery('SELECT * FROM tickets WHERE archived_at IS NULL AND lower(customer_email)=lower($1) ORDER BY updated_at DESC', [customerEmail])).rows : (await pgQuery('SELECT * FROM tickets WHERE archived_at IS NULL ORDER BY updated_at DESC')).rows;
+  return customerEmail ? db.prepare('SELECT * FROM tickets WHERE archived_at IS NULL AND lower(customer_email)=lower(?) ORDER BY updated_at DESC').all(customerEmail) : db.prepare('SELECT * FROM tickets WHERE archived_at IS NULL ORDER BY updated_at DESC').all();
 }
 export async function ticketCount() {
-  return usePostgres ? Number((await pgQuery('SELECT COUNT(*)::int AS count FROM tickets')).rows[0].count) : db.prepare('SELECT COUNT(*) AS count FROM tickets').get().count;
+  return usePostgres ? Number((await pgQuery('SELECT COUNT(*)::int AS count FROM tickets WHERE archived_at IS NULL')).rows[0].count) : db.prepare('SELECT COUNT(*) AS count FROM tickets WHERE archived_at IS NULL').get().count;
 }
 async function ticketSubjectExists(subject) {
   return usePostgres ? (await pgQuery('SELECT 1 FROM tickets WHERE subject=$1 LIMIT 1', [subject])).rowCount > 0 : Boolean(db.prepare('SELECT 1 FROM tickets WHERE subject=? LIMIT 1').get(subject));
@@ -73,12 +75,12 @@ export async function deleteSession(tokenHash) {
 }
 export async function getTicket(id, includeInternal = false) {
   if (usePostgres) {
-    const ticket = (await pgQuery('SELECT * FROM tickets WHERE id=$1', [id])).rows[0]; if (!ticket) return null;
+    const ticket = (await pgQuery('SELECT * FROM tickets WHERE id=$1 AND archived_at IS NULL', [id])).rows[0]; if (!ticket) return null;
     const messages = await pgQuery(`SELECT id,author_id,body,visibility,created_at FROM messages WHERE ticket_id=$1 ${includeInternal ? '' : "AND visibility='public'"} ORDER BY created_at`, [id]);
     const audit = await pgQuery('SELECT id,actor_id,action,details,created_at FROM audit_events WHERE ticket_id=$1 ORDER BY id', [id]);
     return { ...ticket, messages: messages.rows, audit: audit.rows };
   }
-  const ticket = db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null;
+  const ticket = db.prepare('SELECT * FROM tickets WHERE id=? AND archived_at IS NULL').get(id); if (!ticket) return null;
   ticket.messages = db.prepare(`SELECT id,author_id,body,visibility,created_at FROM messages WHERE ticket_id=? ${includeInternal ? '' : "AND visibility='public'"} ORDER BY created_at`).all(id);
   ticket.audit = db.prepare('SELECT id,actor_id,action,details,created_at FROM audit_events WHERE ticket_id=? ORDER BY id').all(id); return ticket;
 }
@@ -105,7 +107,7 @@ export async function updateStatus(id, status, actorId) {
   if (!['open', 'in_progress', 'waiting_customer', 'closed'].includes(status)) throw new Error('status is invalid'); const ticket = usePostgres ? (await pgQuery('SELECT * FROM tickets WHERE id=$1', [id])).rows[0] : db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null; const closedAt = status === 'closed' ? now() : null; const updated = now();
   if (usePostgres) { await pgQuery('UPDATE tickets SET status=$1,closed_at=$2,updated_at=$3 WHERE id=$4', [status, closedAt, updated, id]); await pgAudit(id, actorId, 'ticket.status_changed', { from: ticket.status, to: status }); } else { db.prepare('UPDATE tickets SET status=?,closed_at=?,updated_at=? WHERE id=?').run(status, closedAt, updated, id); sqliteAudit(id, actorId, 'ticket.status_changed', { from: ticket.status, to: status }); } return getTicket(id, true);
 }
-export async function closeInactiveTickets(asOf = now(), actorId = 'system') { const candidates = usePostgres ? (await pgQuery("SELECT id,updated_at FROM tickets WHERE status IN ('open','in_progress','waiting_customer')")).rows : db.prepare("SELECT id,updated_at FROM tickets WHERE status IN ('open','in_progress','waiting_customer')").all(); let closed = 0; for (const ticket of candidates) if (workingMinutesBetween(ticket.updated_at, asOf, await holidays()) >= 5 * 540) { await updateStatus(ticket.id, 'closed', actorId); closed += 1; } return closed; }
+export async function closeInactiveTickets(asOf = now(), actorId = 'system') { const candidates = usePostgres ? (await pgQuery("SELECT id,updated_at FROM tickets WHERE archived_at IS NULL AND status IN ('open','in_progress','waiting_customer')")).rows : db.prepare("SELECT id,updated_at FROM tickets WHERE archived_at IS NULL AND status IN ('open','in_progress','waiting_customer')").all(); let closed = 0; for (const ticket of candidates) if (workingMinutesBetween(ticket.updated_at, asOf, await holidays()) >= 5 * 540) { await updateStatus(ticket.id, 'closed', actorId); closed += 1; } return closed; }
 export async function reopenTicket(id, actorId, asOf = now()) { const ticket = usePostgres ? (await pgQuery('SELECT * FROM tickets WHERE id=$1', [id])).rows[0] : db.prepare('SELECT * FROM tickets WHERE id=?').get(id); if (!ticket) return null; if (ticket.status !== 'closed') return getTicket(id, true); if (workingMinutesBetween(ticket.closed_at, asOf, await holidays()) > 5 * 540) return false; const updated = now(); if (usePostgres) { await pgQuery("UPDATE tickets SET status='open',closed_at=NULL,updated_at=$1 WHERE id=$2", [updated, id]); await pgAudit(id, actorId, 'ticket.reopened', {}); } else { db.prepare("UPDATE tickets SET status='open',closed_at=NULL,updated_at=? WHERE id=?").run(updated, id); sqliteAudit(id, actorId, 'ticket.reopened', {}); } return getTicket(id, true); }
 export async function seedDemoTickets(actorId) {
   const samples = [
@@ -124,4 +126,28 @@ export async function seedDemoTickets(actorId) {
     created = true;
   }
   return created;
+}
+
+export async function archiveTicket(id, actorId) {
+  const archivedAt = now();
+  if (usePostgres) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query('UPDATE tickets SET archived_at=$1 WHERE id=$2 AND archived_at IS NULL RETURNING id', [archivedAt, id]);
+      if (result.rowCount !== 1) { await client.query('ROLLBACK'); return false; }
+      await client.query('INSERT INTO audit_events(ticket_id,actor_id,action,details,created_at) VALUES($1,$2,$3,$4,$5)', [id, actorId, 'ticket.archived', {}, archivedAt]);
+      await client.query('COMMIT');
+      return true;
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+    finally { client.release(); }
+  }
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const result = db.prepare('UPDATE tickets SET archived_at=? WHERE id=? AND archived_at IS NULL').run(archivedAt, id);
+    if (result.changes !== 1) { db.exec('ROLLBACK'); return false; }
+    sqliteAudit(id, actorId, 'ticket.archived', {});
+    db.exec('COMMIT');
+    return true;
+  } catch (error) { db.exec('ROLLBACK'); throw error; }
 }

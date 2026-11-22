@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { ready, storage, listTickets, getTicket, customerExport, createTicket, assignTicket, addMessage, updateStatus, reopenTicket } from './db.js';
+import { ready, storage, listTickets, getTicket, customerExport, createTicket, assignTicket, addMessage, updateStatus, reopenTicket, archiveTicket } from './db.js';
 import { authReady, login, logout, registerCustomer, registerUser, userFromToken } from './auth.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -31,7 +31,7 @@ export async function app(req, res) {
     const user = needsUser(res, await currentUser(req)); if (!user) return;
     if (req.method==='GET' && url.pathname==='/api/tickets') return json(res,200,await listTickets(user.role === 'customer' ? user.email : null));
     if (req.method==='POST' && url.pathname==='/api/tickets') return json(res,201,await createTicket(await body(req),user.id));
-    const m = url.pathname.match(/^\/api\/tickets\/(\d+)(?:\/(assign|messages|status|reopen|audit|export))?$/); if (!m) return json(res,404,{error:'Not found'});
+    const m = url.pathname.match(/^\/api\/tickets\/(\d+)(?:\/(assign|messages|status|reopen|audit|export|archive))?$/); if (!m) return json(res,404,{error:'Not found'});
     const id = Number(m[1]), action=m[2];
     const ticket = await getTicket(id, user.role !== 'customer');
     if (!ticket || (user.role === 'customer' && ticket.customer_email.toLowerCase() !== user.email.toLowerCase())) return deny(res,404,'Ticket not found');
@@ -40,6 +40,7 @@ export async function app(req, res) {
     if (req.method==='POST' && action==='messages') { const input = await body(req); if(input.visibility==='internal' && !['agent','admin'].includes(user.role)) return deny(res,403,'Internal notes are private'); return json(res,201,await addMessage(id,input,user.id)); }
     if (req.method==='POST' && action==='status') { if (!needsRole(res,user,['agent','admin'])) return; return json(res,200,await updateStatus(id,(await body(req)).status,user.id)); }
     if (req.method==='POST' && action==='reopen') { const result=await reopenTicket(id,user.id); return result===false ? json(res,422,{error:'Reopen window has expired'}) : json(res,200,result); }
+    if (req.method==='POST' && action==='archive') { if (!needsRole(res,user,['admin'])) return; return json(res,200,{ archived: await archiveTicket(id,user.id) }); }
     if (req.method==='GET' && action==='audit') { if (!needsRole(res,user,['agent','admin'])) return; return json(res,200,ticket.audit || []); }
     if (req.method==='GET' && action==='export') return json(res,200,await customerExport(id));
     return json(res,405,{error:'Method not allowed'});

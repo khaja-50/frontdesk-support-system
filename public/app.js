@@ -150,6 +150,7 @@ async function openTicket(id) {
     $('#detail-assignee').value = ticket.assignee_id || '';
     showMessages(ticket.messages || []);
     $('#detail-actions').hidden = currentUser.role === 'customer';
+    $('#detail-archive').hidden = currentUser.role !== 'admin';
     $('#detail-audit').innerHTML = currentUser.role === 'customer' ? '' : showAudit(ticket.audit || []);
   } catch (error) { $('#detail-subject').textContent = 'Ticket unavailable'; $('#detail-error').textContent = error.message; }
   finally { openingTicket = false; }
@@ -241,6 +242,15 @@ $('#detail-assign').onclick = (event) => runAction(event.currentTarget, '#detail
   await api(`/api/tickets/${currentTicketId}/assign`, { method: 'POST', body: JSON.stringify({ assignee_id: assigneeId }) });
   await refresh(); await openTicket(currentTicketId); showToast('Ticket assigned');
 });
+$('#detail-archive').onclick = async (event) => {
+  const button = event.currentTarget;
+  await runAction(button, '#detail-error', async () => {
+    await api(`/api/tickets/${currentTicketId}/archive`, { method: 'POST' });
+    $('#ticket-detail-dialog').close();
+    await refresh();
+    showToast(`Ticket SA-${currentTicketId} archived`);
+  });
+};
 $('#profile').onclick = () => {
   $('#profile-name').textContent = currentUser.display_name;
   $('#profile-role').textContent = currentUser.role === 'admin' ? 'Administrator' : currentUser.role === 'agent' ? 'Support agent' : 'Customer';

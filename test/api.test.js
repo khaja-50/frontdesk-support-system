@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { db, ready, createTicket, addMessage, getTicket, customerExport, assignTicket, updateStatus, closeInactiveTickets, reopenTicket } from '../src/db.js';
+import { db, ready, createTicket, addMessage, getTicket, customerExport, assignTicket, updateStatus, closeInactiveTickets, reopenTicket, archiveTicket, listTickets } from '../src/db.js';
 
 test.before(async () => { await ready; db.exec('DELETE FROM audit_events; DELETE FROM messages; DELETE FROM tickets;'); });
 test.after(() => db.close());
@@ -55,4 +55,15 @@ test('customer export contains public conversation only', async () => {
   assert.equal(exported.messages.length, 1);
   assert.equal(exported.messages[0].body, 'Public answer');
   assert.equal('audit' in exported, false);
+});
+
+test('archiving removes a ticket from the queue while preserving its audit record', async () => {
+  const ticket = await createTicket({ subject: 'Temporary review ticket', customer_email: 'review@example.com', description: 'Archive after review', priority: 'normal' }, 'tester');
+  assert.equal(await archiveTicket(ticket.id, 'admin'), true);
+  assert.equal(await archiveTicket(ticket.id, 'admin'), false);
+  assert.equal((await listTickets()).some(item => item.id === ticket.id), false);
+  assert.equal(await getTicket(ticket.id, true), null);
+  const events = db.prepare('SELECT action,actor_id FROM audit_events WHERE ticket_id=? ORDER BY id').all(ticket.id);
+  assert.equal(events.at(-1).action, 'ticket.archived');
+  assert.equal(events.at(-1).actor_id, 'admin');
 });
