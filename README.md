@@ -30,9 +30,9 @@ This repository is a focused assessment implementation. The local workflow is co
 
 Production login uses a hashed password and an HTTP-only session cookie. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the hosting environment to bootstrap the first administrator. An administrator can create customer or agent accounts with `POST /api/users`; customers can see only their own tickets, while agents and administrators can work the full queue and add internal notes.
 
-The sign-in page also provides a customer self-registration path for review. Admin and agent accounts remain controlled by the administrator. On a fresh hosted database, the app adds three demo tickets—open, waiting on customer, and closed—so reviewers can inspect each queue view immediately. Existing data is never overwritten.
+The sign-in page also provides a customer self-registration path for review. Admin and agent accounts remain controlled by the administrator. On a fresh hosted database, the app adds five demo tickets across the open, in-progress, waiting, and closed views. Existing data is never overwritten.
 
-For the assessment demo, use the temporary administrator email and password configured in Render under the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables. The sign-in page points reviewers here for setup guidance. Do not commit the actual password to this public repository; replace the temporary value after review if the deployment is reused.
+The assessment sign-in page displays the public demo administrator email and password (`1234`). Set `ADMIN_EMAIL` to that email and `ADMIN_PASSWORD` to `1234` in Render for the live demo; the administrator password hash follows the configured value on startup. These public credentials are for a disposable assessment environment only. Rotate them and remove the login hint before using the service with real customer data.
 
 ## Verification after hosting
 
