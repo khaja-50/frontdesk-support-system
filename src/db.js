@@ -122,11 +122,47 @@ export async function seedDemoTickets(actorId) {
     { subject: 'Change notification preferences', customer_email: 'sam.demo@example.com', description: 'The customer wants to stop receiving weekly account summaries.', priority: 'high', status: 'closed', message: 'Notification preferences were updated successfully.' }
   ];
   let created = false;
-  for (const sample of samples) {
+  if (await ticketCount() === 0) {
+    for (const sample of samples) {
+      if (await ticketSubjectExists(sample.subject)) continue;
+      const ticket = await createTicket(sample, actorId);
+      if (sample.message) await addMessage(ticket.id, { body: sample.message, visibility: 'public' }, actorId);
+      await updateStatus(ticket.id, sample.status, actorId);
+      created = true;
+    }
+  }
+  const replacements = [
+    { id: 4, subject: 'Two-factor code is not arriving', customer_email: 'aditi.demo@example.com', description: 'The customer cannot receive the verification code needed to sign in.', priority: 'high', status: 'open' },
+    { id: 7, subject: 'Exported report has missing rows', customer_email: 'dev.demo@example.com', description: 'A report export is missing several records shown in the workspace.', priority: 'normal', status: 'waiting_customer' },
+  ];
+  for (const sample of replacements) {
+    const alreadyRestored = usePostgres ? (await pgQuery("SELECT 1 FROM audit_events WHERE ticket_id=$1 AND action='ticket.demo_restored' LIMIT 1", [sample.id])).rowCount > 0 : Boolean(db.prepare("SELECT 1 FROM audit_events WHERE ticket_id=? AND action='ticket.demo_restored' LIMIT 1").get(sample.id));
+    if (alreadyRestored) continue;
+    const archived = usePostgres ? (await pgQuery('SELECT id FROM tickets WHERE id=$1 AND archived_at IS NOT NULL', [sample.id])).rows[0] : db.prepare('SELECT id FROM tickets WHERE id=? AND archived_at IS NOT NULL').get(sample.id);
+    if (!archived) continue;
+    const updated = now();
+    if (usePostgres) {
+      await pgQuery('UPDATE tickets SET subject=$1,customer_email=$2,description=$3,priority=$4,status=$5,archived_at=NULL,updated_at=$6,closed_at=NULL WHERE id=$7 AND archived_at IS NOT NULL', [sample.subject, sample.customer_email, sample.description, sample.priority, sample.status, updated, sample.id]);
+      await pgAudit(sample.id, actorId, 'ticket.demo_restored', { subject: sample.subject });
+    } else {
+      db.prepare('UPDATE tickets SET subject=?,customer_email=?,description=?,priority=?,status=?,archived_at=NULL,updated_at=?,closed_at=NULL WHERE id=? AND archived_at IS NOT NULL').run(sample.subject, sample.customer_email, sample.description, sample.priority, sample.status, updated, sample.id);
+      sqliteAudit(sample.id, actorId, 'ticket.demo_restored', { subject: sample.subject });
+    }
+    created = true;
+  }
+  const moreSamples = [
+    { subject: 'Cannot invite a teammate', customer_email: 'priya.demo@example.com', description: 'The invitation email has not arrived after several attempts.', priority: 'normal', status: 'open' },
+    { subject: 'Duplicate charge on subscription', customer_email: 'omar.demo@example.com', description: 'Two charges appear for the same monthly subscription.', priority: 'urgent', status: 'in_progress', message: 'We are comparing the payment records now.' },
+    { subject: 'Workspace access after plan change', customer_email: 'tara.demo@example.com', description: 'A teammate lost access to the workspace after the plan was updated.', priority: 'high', status: 'closed', message: 'Access has been restored for the affected teammate.' },
+    { subject: 'Search results omit recent tickets', customer_email: 'ishan.demo@example.com', description: 'Recently created requests do not appear in search results.', priority: 'normal', status: 'open' },
+    { subject: 'Need help changing account email', customer_email: 'zoya.demo@example.com', description: 'The customer wants to change the email address used for their account.', priority: 'normal', status: 'waiting_customer', message: 'Please confirm the new address you would like to use.' },
+  ];
+  for (const sample of moreSamples) {
+    if (await ticketCount() >= 10) break;
     if (await ticketSubjectExists(sample.subject)) continue;
     const ticket = await createTicket(sample, actorId);
     if (sample.message) await addMessage(ticket.id, { body: sample.message, visibility: 'public' }, actorId);
-    await updateStatus(ticket.id, sample.status, actorId);
+    if (sample.status !== 'open') await updateStatus(ticket.id, sample.status, actorId);
     created = true;
   }
   return created;
